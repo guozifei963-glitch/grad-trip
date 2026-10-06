@@ -1,0 +1,2865 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GradTrip 毕旅搭子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap">
+<style>
+/* Layout: 单列居中工作区（max 1120px），卡片按角色区分；签名元素 = 登机牌式组队卡 + 车票式行程时间轴 */
+:root {
+  --bg: #FFF7EE;          /* 奶油白 */
+  --surface: #FFFFFF;
+  --surface-2: #FFF1E3;
+  --ink: #2A211C;
+  --muted: #7B6A5F;
+  --line: #F0DFCE;
+  --sun: #F2672A;         /* 日落橙：主操作 */
+  --sun-ink: #FFFFFF;
+  --sun-soft: #FFE6D6;
+  --sea: #2F7FE0;         /* 海盐蓝：信息 */
+  --sea-soft: #E2EEFC;
+  --mint: #1F9E6A;        /* 成功 / 已确认 */
+  --mint-soft: #DDF4E9;
+  --lemon: #FFD23F;
+  --lemon-soft: #FFF4C9;
+  --pink: #F2709A;
+  --pink-soft: #FDE3EC;
+  --danger: #D93F45;
+  --danger-soft: #FCE4E4;
+  --shadow: 0 1px 2px rgba(80, 40, 10, .06), 0 8px 24px rgba(80, 40, 10, .07);
+  --f-display: "ZCOOL KuaiLe", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 18px;
+  --r-sm: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B1512; --surface: #251D18; --surface-2: #2E241E; --ink: #F6ECE3; --muted: #B8A799; --line: #3D3029;
+    --sun: #FF8048; --sun-ink: #1B1512; --sun-soft: #4A2A1C; --sea: #6AAEFF; --sea-soft: #1F3048;
+    --mint: #4FD39C; --mint-soft: #173A2C; --lemon: #FFD84D; --lemon-soft: #3F361A; --pink: #FF8FB1; --pink-soft: #45222F;
+    --danger: #FF6B6F; --danger-soft: #4A2224; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1B1512; --surface: #251D18; --surface-2: #2E241E; --ink: #F6ECE3; --muted: #B8A799; --line: #3D3029;
+  --sun: #FF8048; --sun-ink: #1B1512; --sun-soft: #4A2A1C; --sea: #6AAEFF; --sea-soft: #1F3048;
+  --mint: #4FD39C; --mint-soft: #173A2C; --lemon: #FFD84D; --lemon-soft: #3F361A; --pink: #FF8FB1; --pink-soft: #45222F;
+  --danger: #FF6B6F; --danger-soft: #4A2224; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { margin: 0; line-height: 1.25; text-wrap: balance; }
+h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 6vw, 52px); letter-spacing: .5px; }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(22px, 3.6vw, 30px); }
+h3 { font-size: 17px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--sea); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sea); outline-offset: 2px; border-radius: 8px; }
+.mono { font-family: var(--f-mono); letter-spacing: .04em; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--sun); text-transform: uppercase; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; }
+.page { padding-block: 24px 120px; display: grid; gap: 20px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.stack { display: grid; gap: 12px; }
+.grid-2 { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .grid-2 { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
+.spacer { flex: 1; }
+
+/* ---------- 顶栏 ---------- */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; align-items: center; gap: 10px; height: 58px; }
+.logo { display: flex; align-items: baseline; gap: 6px; background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--f-display); font-size: 22px; color: var(--ink); white-space: nowrap; }
+.logo b { color: var(--sun); font-weight: 400; }
+.logo small { font-family: var(--f-body); font-size: 12px; color: var(--muted); }
+.crumb { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; max-width: 32vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.who select { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 10px; font-size: 13px; color: var(--ink); max-width: 130px; }
+@media (max-width: 560px) { .logo small, .who > span { display: none; } .crumb { max-width: 28vw; } }
+
+/* ---------- 按钮 ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 18px; font-weight: 600; font-size: 14px; cursor: pointer; transition: transform .12s, background .15s, border-color .15s; white-space: nowrap; text-decoration: none; }
+.btn:hover:not(:disabled) { border-color: var(--sun); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--sun); border-color: var(--sun); color: var(--sun-ink); box-shadow: 0 6px 16px -6px var(--sun); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.05); }
+.btn.sea { background: var(--sea); border-color: var(--sea); color: var(--sun-ink); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--ink); background: var(--surface-2); border-color: transparent; }
+.btn.danger { color: var(--danger); border-color: var(--danger-soft); }
+.btn.danger.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn.lg { padding: 13px 26px; font-size: 16px; }
+.btn.sm { padding: 5px 12px; font-size: 13px; }
+.btn.block { width: 100%; }
+.btn.pulse:not(:disabled) { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 6px 16px -6px var(--sun); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--sun) 18%, transparent); } }
+.icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; min-width: 34px; height: 32px; padding: 0 8px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.icon-btn:hover { border-color: var(--sun); }
+.icon-btn.on { background: var(--sun-soft); border-color: var(--sun); }
+.hint { font-size: 13px; color: var(--muted); }
+.hint.warn { color: var(--danger); }
+
+/* ---------- 卡片 & 标签 ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+.card.flat { box-shadow: none; }
+.card.tint { background: var(--surface-2); box-shadow: none; }
+.card-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; transition: all .12s; user-select: none; }
+.chip:hover { border-color: var(--sun); }
+.chip.on { background: var(--sun-soft); border-color: var(--sun); color: var(--ink); font-weight: 600; }
+.chip.off { opacity: .4; cursor: not-allowed; }
+.chip .rank { width: 20px; height: 20px; border-radius: 50%; background: var(--sun); color: var(--sun-ink); font-size: 12px; display: inline-grid; place-items: center; font-weight: 700; }
+.chip .x { opacity: .55; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.tag.sun { background: var(--sun-soft); color: var(--sun); }
+.tag.sea { background: var(--sea-soft); color: var(--sea); }
+.tag.mint { background: var(--mint-soft); color: var(--mint); }
+.tag.pink { background: var(--pink-soft); color: var(--pink); }
+.tag.lemon { background: var(--lemon-soft); color: var(--ink); }
+.tag.danger { background: var(--danger-soft); color: var(--danger); }
+.banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: var(--r-sm); background: var(--lemon-soft); border: 1px solid color-mix(in srgb, var(--lemon) 60%, transparent); }
+.banner.sea { background: var(--sea-soft); border-color: color-mix(in srgb, var(--sea) 30%, transparent); }
+.banner.mint { background: var(--mint-soft); border-color: color-mix(in srgb, var(--mint) 30%, transparent); }
+.banner .grow { flex: 1; min-width: 180px; }
+
+/* ---------- 头像 ---------- */
+.ava { width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--surface-2); border: 2px solid var(--surface); font-size: 19px; flex: none; position: relative; }
+.ava.lg { width: 56px; height: 56px; font-size: 30px; }
+.ava.sm { width: 28px; height: 28px; font-size: 15px; }
+.ava .ok { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; border-radius: 50%; background: var(--mint); color: #fff; font-size: 10px; display: grid; place-items: center; border: 2px solid var(--surface); }
+.ava-stack { display: flex; }
+.ava-stack .ava { margin-left: -8px; }
+.ava-stack .ava:first-child { margin-left: 0; }
+
+/* ---------- 表单 ---------- */
+.field { display: grid; gap: 6px; }
+.field > label, .label { font-weight: 600; font-size: 14px; }
+.input, select.input, textarea.input { width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 10px 14px; outline: none; transition: border-color .15s; }
+.input:focus { border-color: var(--sun); }
+.input.err { border-color: var(--danger); }
+.err-text { color: var(--danger); font-size: 13px; }
+.input-row { display: flex; gap: 8px; }
+.input-row .input { flex: 1; min-width: 0; }
+.form-grid { display: grid; gap: 18px; }
+.two { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+
+/* 双滑块 */
+.dual { position: relative; height: 36px; }
+.dual .track { position: absolute; left: 0; right: 0; top: 16px; height: 6px; border-radius: 3px; background: var(--line); }
+.dual .fill { position: absolute; top: 16px; height: 6px; border-radius: 3px; background: var(--sun); }
+.dual input[type=range] { position: absolute; left: 0; width: 100%; top: 6px; margin: 0; pointer-events: none; -webkit-appearance: none; appearance: none; background: none; height: 26px; }
+.dual input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 3px solid var(--sun); cursor: grab; box-shadow: var(--shadow); }
+.dual input[type=range]::-moz-range-thumb { pointer-events: auto; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 3px solid var(--sun); cursor: grab; }
+.big-num { font-family: var(--f-display); font-size: 34px; color: var(--sun); }
+
+/* ---------- Landing ---------- */
+.hero { display: grid; gap: 32px; align-items: center; padding-block: 24px 8px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .hero { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); padding-block: 48px 16px; } }
+.hero h1 em { font-style: normal; color: var(--sun); }
+.hero .sub { font-size: 17px; color: var(--muted); max-width: 30em; margin-top: 14px; }
+.hero .ctas { margin-top: 24px; }
+.code-box { margin-top: 14px; max-width: 380px; }
+.code-box .input { font-family: var(--f-mono); letter-spacing: .2em; text-transform: uppercase; }
+.steps3 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.step-card { padding: 18px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 6px; }
+.step-card .n { font-family: var(--f-mono); color: var(--sun); font-size: 13px; }
+.step-card .big { font-size: 28px; }
+
+/* ---------- 登机牌 ---------- */
+.pass { position: relative; background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; min-width: 0; display: flex; flex-direction: column; }
+.pass-top { display: flex; justify-content: space-between; gap: 10px; padding: 10px 18px; background: var(--sun); color: var(--sun-ink); font-size: 11px; }
+.pass.sea .pass-top { background: var(--sea); }
+.pass.mint .pass-top { background: var(--mint); }
+.pass-main { padding: 16px 18px 14px; display: grid; gap: 12px; }
+.route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.route .end small { display: block; font-size: 10px; color: var(--muted); letter-spacing: .12em; font-family: var(--f-mono); }
+.route .end b { font-family: var(--f-display); font-weight: 400; font-size: 26px; display: block; line-height: 1.1; }
+.route .end .mono { font-size: 12px; color: var(--muted); }
+.route .end.to { text-align: right; }
+.route .path { height: 2px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px); position: relative; }
+.route .path::after { content: "✈"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -55%); background: var(--surface); padding: 0 6px; color: var(--sun); font-size: 16px; }
+.pass-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 420px) { .pass-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pf small { display: block; font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; color: var(--muted); }
+.pf b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.perf { position: relative; height: 0; border-top: 2px dashed var(--line); margin: 0 14px; }
+.perf::before, .perf::after { content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); }
+.perf::before { left: -26px; } .perf::after { right: -26px; }
+.pass-body { padding: 14px 18px 18px; display: grid; gap: 12px; flex: 1; align-content: start; }
+.pass-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pass-title h3 { font-size: 18px; }
+.ring { --p: 80; --c: var(--sun); width: 62px; height: 62px; border-radius: 50%; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0); display: grid; place-items: center; flex: none; }
+.ring > span { width: 48px; height: 48px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
+.ring > span small { display: block; font-size: 9px; color: var(--muted); font-weight: 500; }
+.reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.reasons li { display: flex; gap: 8px; }
+.reasons li::before { content: "✓"; color: var(--mint); font-weight: 700; flex: none; }
+.reasons.warn li::before { content: "!"; color: var(--sun); }
+.reasons.warn li { color: var(--muted); }
+.mchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 13px; }
+.mchip:hover { border-color: var(--sun); }
+.mchip.me { border-color: var(--sea); background: var(--sea-soft); }
+.stamp { position: absolute; left: 50%; top: 46px; transform: translateX(-50%) rotate(-12deg); background: var(--surface); border: 3px solid var(--mint); color: var(--mint); font-family: var(--f-display); font-size: 22px; padding: 2px 14px; border-radius: 10px; opacity: .85; pointer-events: none; animation: stamp .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes stamp { from { transform: translateX(-50%) rotate(-12deg) scale(2.2); opacity: 0; } }
+.bars { display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 72px 1fr 44px; gap: 10px; align-items: center; font-size: 13px; }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--sun); border-radius: 4px; }
+.bar.sea > i { background: var(--sea); }
+.bar.mint > i { background: var(--mint); }
+.pass-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); align-items: start; }
+
+/* ---------- 看板 ---------- */
+.progress-ring { --p: 50; width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(var(--mint) calc(var(--p) * 1%), var(--surface-2) 0); display: grid; place-items: center; flex: none; }
+.progress-ring > div { width: 94px; height: 94px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; text-align: center; line-height: 1.1; }
+.progress-ring b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.member-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); }
+.mcard { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; min-width: 0; }
+.mcard:hover { border-color: var(--sun); }
+.mcard.me { border-color: var(--sea); }
+.mcard .nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcard .st { font-size: 12px; }
+.mcard.pending { border-style: dashed; }
+.heat { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.heat .d { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-variant-numeric: tabular-nums; max-width: 100%; }
+.heat .wd { font-size: 11px; color: var(--muted); text-align: center; }
+.legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.empty { text-align: center; padding: 36px 20px; display: grid; gap: 10px; justify-items: center; }
+.empty .art { font-size: 54px; line-height: 1; }
+
+/* ---------- 偏好填写 ---------- */
+.stepper { display: flex; gap: 6px; }
+.stepper i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.stepper i.on { background: var(--sun); }
+.step-wrap { max-width: 720px; width: 100%; margin: 0 auto; display: grid; gap: 18px; }
+.cal-month { display: grid; gap: 6px; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal .wd { text-align: center; font-size: 12px; color: var(--muted); }
+.cal button { aspect-ratio: 1; max-width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; cursor: pointer; font-variant-numeric: tabular-nums; font-size: 14px; padding: 0; }
+.cal button:hover { border-color: var(--sun); }
+.cal button.sel { background: var(--sun); border-color: var(--sun); color: var(--sun-ink); font-weight: 700; }
+.cal button.anchor { outline: 3px solid var(--sea); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 6px 16px; border-radius: 999px; cursor: pointer; font-weight: 600; }
+.seg button.on { background: var(--sun); color: var(--sun-ink); }
+.pace-cards { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 520px) { .pace-cards { grid-template-columns: 1fr; } }
+.pace-card { border: 1.5px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 14px; cursor: pointer; text-align: left; display: grid; gap: 4px; }
+.pace-card .e { font-size: 26px; }
+.pace-card.on { border-color: var(--sun); background: var(--sun-soft); }
+.lock { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--mint); background: var(--mint-soft); padding: 8px 12px; border-radius: 10px; }
+.persona { background: linear-gradient(135deg, var(--sun-soft), var(--sea-soft)); border-radius: var(--r); padding: 24px; display: grid; gap: 12px; text-align: center; justify-items: center; border: 1px solid var(--line); }
+.foot-nav { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
+/* ---------- 行程 ---------- */
+.group-head { display: grid; gap: 14px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 10px 16px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1.5px; white-space: nowrap; }
+.tabs button.on { color: var(--ink); border-color: var(--sun); }
+.days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.day-btn { flex: none; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 8px 14px; cursor: pointer; text-align: center; line-height: 1.2; }
+.day-btn b { display: block; font-family: var(--f-mono); font-size: 13px; }
+.day-btn small { color: var(--muted); font-size: 12px; }
+.day-btn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.day-btn.on small { color: inherit; opacity: .7; }
+.timeline { display: grid; gap: 0; position: relative; }
+.tl-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; position: relative; padding-bottom: 14px; }
+.tl-row::before { content: ""; position: absolute; left: 31px; top: 30px; bottom: 0; border-left: 2px dashed var(--line); }
+.tl-row:last-child::before { display: none; }
+.tl-slot { text-align: center; font-size: 12px; color: var(--muted); padding-top: 6px; }
+.tl-slot .ic { width: 34px; height: 34px; margin: 0 auto 2px; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 16px; }
+.ticket { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 14px; display: grid; gap: 8px; box-shadow: var(--shadow); min-width: 0; }
+.ticket.fixed { background: var(--surface-2); box-shadow: none; border-style: dashed; }
+.ticket.free { background: transparent; border-style: dashed; box-shadow: none; }
+.ticket-head { display: flex; gap: 10px; align-items: flex-start; }
+.ticket-head .em { font-size: 26px; line-height: 1; flex: none; }
+.ticket-head .t { flex: 1; min-width: 0; }
+.ticket-head .t b { font-size: 15px; }
+.ticket-head .cost { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.why { font-size: 13px; color: var(--muted); }
+.ticket-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.budget-panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); display: grid; gap: 14px; }
+.kv { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.kv.total { font-weight: 700; font-size: 16px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.meter { height: 10px; border-radius: 5px; background: var(--surface-2); position: relative; overflow: hidden; }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--mint); }
+.meter.over > i { background: var(--danger); }
+.plan-layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 900px) { .plan-layout { grid-template-columns: minmax(0, 1fr) 320px; } }
+
+/* ---------- AA ---------- */
+.stat-row { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 560px) { .stat-row { grid-template-columns: 1fr 1fr; } .stat-row > :last-child { grid-column: 1 / -1; } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 14px; display: grid; gap: 2px; min-width: 0; }
+.stat small { color: var(--muted); font-size: 12px; }
+.stat b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.bill { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; width: 100%; }
+.bill:hover { border-color: var(--sun); }
+.bill .cat { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--surface-2); flex: none; }
+.bill .info { flex: 1; min-width: 0; }
+.bill .info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bill .amt { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.bal-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.bal-table th, .bal-table td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bal-table th:first-child, .bal-table td:first-child { text-align: left; }
+.bal-table th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.pos { color: var(--mint); font-weight: 700; } .neg { color: var(--danger); font-weight: 700; }
+.transfer { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); flex-wrap: wrap; }
+.transfer .arrow { color: var(--muted); }
+.transfer .amt { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; margin-left: auto; }
+.transfer.done { opacity: .55; }
+.transfer.done .amt { text-decoration: line-through; }
+.fab { position: fixed; right: 20px; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 25; }
+.table-wrap { overflow-x: auto; }
+
+/* ---------- 弹层 / 抽屉 / Toast ---------- */
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(30, 18, 10, .45); display: flex; align-items: center; justify-content: center; padding: 16px; animation: fade .15s; }
+.modal { background: var(--surface); border-radius: 22px; width: min(520px, 100%); max-height: calc(100% - 24px); overflow-y: auto; padding: 22px; display: grid; gap: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.25); animation: pop .2s cubic-bezier(.2, 1.3, .4, 1); }
+.modal.wide { width: min(680px, 100%); }
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.modal-foot { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .overlay.sheet { align-items: flex-end; padding: 0; }
+  .overlay.sheet .modal { border-radius: 22px 22px 0 0; width: 100%; max-height: 90%; padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); animation: up .22s ease-out; }
+}
+.drawer-overlay { justify-content: flex-end; padding: 0; align-items: stretch; }
+.drawer { background: var(--surface); width: min(400px, 100%); height: 100%; overflow-y: auto; padding: 24px; display: grid; gap: 16px; align-content: start; animation: slide .22s ease-out; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+@keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+.toasts { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); transform: translateX(-50%); z-index: 60; display: grid; gap: 8px; justify-items: center; pointer-events: none; width: max-content; max-width: calc(100% - 32px); }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow); animation: up .2s ease-out; text-align: center; }
+.option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 1.5px solid var(--line); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; text-align: left; }
+.option:hover { border-color: var(--sun); }
+.option { flex-wrap: wrap; }
+.option .grow { flex: 1; min-width: 160px; }
+.code-big { font-family: var(--f-mono); font-size: clamp(34px, 9vw, 48px); letter-spacing: .18em; color: var(--sun); text-align: center; padding: 12px; border: 2px dashed var(--sun); border-radius: var(--r); background: var(--sun-soft); }
+.loading { display: grid; justify-items: center; gap: 18px; padding: 56px 20px; text-align: center; }
+.plane-anim { font-size: 54px; animation: fly 1.4s ease-in-out infinite; }
+@keyframes fly { 0%, 100% { transform: translate(-16px, 4px) rotate(-6deg); } 50% { transform: translate(16px, -6px) rotate(4deg); } }
+.load-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; text-align: left; }
+.load-steps li { color: var(--muted); }
+.load-steps li.done { color: var(--mint); }
+.load-steps li.now { color: var(--ink); font-weight: 700; }
+
+/* ---------- Demo 工具条 ---------- */
+.dock { position: fixed; left: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 40; display: grid; gap: 8px; justify-items: start; }
+.dock-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px; display: grid; gap: 6px; box-shadow: var(--shadow); min-width: 190px; }
+.dock-panel .btn { justify-content: flex-start; }
+.dock-toggle { background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 70; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<canvas id="confetti"></canvas>
+<script>
+"use strict";
+/* ---- core/util.js ---- */
+/* ============ core/util.js · 纯工具函数（无 DOM 依赖，可在 Node 中测试） ============ */
+const DAY_MS = 86400000;
+
+function toDayNum(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return Math.round(Date.UTC(y, m - 1, d) / DAY_MS);
+}
+function fromDayNum(n) {
+  return new Date(n * DAY_MS).toISOString().slice(0, 10);
+}
+function addDays(s, k) { return fromDayNum(toDayNum(s) + k); }
+function dateList(a, b) {
+  const out = [];
+  for (let n = toDayNum(a); n <= toDayNum(b); n++) out.push(fromDayNum(n));
+  return out;
+}
+function fmtMD(s) {
+  if (!s) return '';
+  const [, m, d] = s.split('-').map(Number);
+  return `${m}/${d}`;
+}
+function weekdayCN(s) { return '日一二三四五六'[new Date(toDayNum(s) * DAY_MS).getUTCDay()]; }
+
+/** 一组日期中最长的连续区间 */
+function longestRun(dates) {
+  const ns = [...new Set(dates.map(toDayNum))].sort((a, b) => a - b);
+  let best = { start: null, len: 0 }, s = null, len = 0, prev = null;
+  for (const n of ns) {
+    if (prev !== null && n === prev + 1) len++; else { s = n; len = 1; }
+    if (len > best.len) best = { start: s, len };
+    prev = n;
+  }
+  return best.len ? { start: fromDayNum(best.start), len: best.len } : { start: null, len: 0 };
+}
+function intersectDates(lists) {
+  if (!lists.length) return [];
+  let set = new Set(lists[0]);
+  for (const l of lists.slice(1)) { const s2 = new Set(l); set = new Set([...set].filter(x => s2.has(x))); }
+  return [...set].sort();
+}
+
+/** 稳定哈希 + 种子随机数：保证同一个团每次生成的行程一致 */
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function uid(p = 'id') {
+  return p + '_' + Math.random().toString(36).slice(2, 7) + Date.now().toString(36).slice(-4);
+}
+/** 众数；平票时取最先达到最高次数的值 */
+function modeOf(arr, fallback) {
+  const c = new Map(); let best = fallback, bc = 0;
+  for (const x of arr) { const v = (c.get(x) || 0) + 1; c.set(x, v); if (v > bc) { bc = v; best = x; } }
+  return best;
+}
+function countBy(arr) { const c = {}; for (const x of arr) c[x] = (c[x] || 0) + 1; return c; }
+
+/** 金额：内部一律以「分」为整数 */
+function yuanToFen(v) { return Math.round(Number(v) * 100); }
+function fmtFen(n) {
+  const neg = n < 0; const a = Math.abs(n);
+  const s = a % 100 === 0 ? String(a / 100) : (a / 100).toFixed(2);
+  return (neg ? '-¥' : '¥') + s;
+}
+function fmtYuan(n) { return '¥' + Math.round(n).toLocaleString('en-US'); }
+
+/* ---- data/destinations.js ---- */
+/* ============ data/destinations.js · 目的地与 POI 资源库（Mock） ============
+ * POI 行格式: [名称, 类型, 标签(|分隔), 可安排时段(m上午 a下午 e晚上), 人均花费, 冲突项(|分隔), emoji]
+ * 类型: s 景点 / f 美食 / a 体验 / n 夜生活
+ * 住宿行格式: [名称, 档位, 每晚人均]
+ */
+const STYLE_TAGS = ['美食', '自然风光', '城市漫步', '拍照打卡', '历史人文', '海边度假', '刺激项目'];
+const DISLIKES = ['早起', '爬山', '夜生活', '排队'];
+const PACE_LABEL = { rush: '特种兵', normal: '适中', chill: '躺平' };
+const PACE_EMOJI = { rush: '🏃', normal: '🚶', chill: '🛋️' };
+const PACE_DESC = { rush: '一天 4 个点，能走就不歇', normal: '有玩有歇，张弛有度', chill: '睡到自然醒，随走随停' };
+const STAY_LABEL = { hostel: '青旅', budget: '经济酒店', comfort: '舒适酒店', bnb: '民宿' };
+const SLOT_LABEL = { m: '上午', a: '下午', e: '晚上', n: '夜宵' };
+const SLOT_ICON = { m: '☀️', a: '🌤️', e: '🌙', n: '✨' };
+const TYPE_LABEL = { s: '景点', f: '美食', a: '体验', n: '夜生活' };
+
+const DEST_META = {
+  成都: { emoji: '🐼', code: 'CTU' }, 厦门: { emoji: '🏝️', code: 'XMN' }, 西安: { emoji: '🏯', code: 'XIY' },
+  重庆: { emoji: '🌉', code: 'CKG' }, 大理: { emoji: '⛰️', code: 'DLU' }, 青岛: { emoji: '🍺', code: 'TAO' },
+  长沙: { emoji: '🌶️', code: 'CSX' }, 三亚: { emoji: '🌴', code: 'SYX' },
+};
+const DEFAULT_DESTS = Object.keys(DEST_META);
+
+const RAW_POIS = {
+  成都: {
+    pois: [
+      ['大熊猫繁育研究基地', 's', '自然风光|拍照打卡', 'm', 55, '早起', '🐼'],
+      ['宽窄巷子', 's', '城市漫步|拍照打卡|历史人文', 'ma', 0, '', '🏮'],
+      ['人民公园鹤鸣茶社', 's', '城市漫步', 'ma', 30, '', '🍵'],
+      ['武侯祠', 's', '历史人文', 'ma', 50, '', '🏛️'],
+      ['锦里古街', 's', '历史人文|美食|城市漫步', 'ae', 0, '', '🏮'],
+      ['杜甫草堂', 's', '历史人文|自然风光', 'ma', 50, '', '📜'],
+      ['太古里 · 爬墙熊猫', 's', '城市漫步|拍照打卡', 'ae', 0, '', '🛍️'],
+      ['玉林路小酒馆', 'n', '城市漫步', 'e', 80, '夜生活', '🎸'],
+      ['九眼桥夜景', 'n', '拍照打卡|城市漫步', 'e', 0, '夜生活', '🌉'],
+      ['川剧变脸 · 蜀风雅韵', 'a', '历史人文', 'e', 180, '', '🎭'],
+      ['青城山', 's', '自然风光', 'm', 90, '早起|爬山', '⛰️'],
+      ['成都欢乐谷', 'a', '刺激项目', 'ma', 200, '排队', '🎢'],
+      ['蜀大侠火锅', 'f', '美食', 'e', 110, '', '🍲'],
+      ['串串香 · 冷锅鱼', 'f', '美食', 'e', 80, '', '🍢'],
+      ['建设路小吃街', 'f', '美食|城市漫步', 'ae', 60, '', '🥟'],
+      ['钟水饺 · 龙抄手', 'f', '美食|历史人文', 'ma', 40, '', '🥟'],
+      ['奎星楼街', 'f', '美食|拍照打卡', 'ae', 70, '', '🍜'],
+      ['东郊记忆', 's', '拍照打卡|城市漫步', 'a', 0, '', '📷'],
+    ],
+    stays: [['熊猫青年旅舍', 'hostel', 80], ['春熙路全季酒店', 'budget', 160], ['玉林小院民宿', 'bnb', 200], ['太古里亚朵酒店', 'comfort', 260]],
+  },
+  厦门: {
+    pois: [
+      ['鼓浪屿环岛', 's', '海边度假|拍照打卡|历史人文', 'ma', 35, '排队', '🏝️'],
+      ['环岛路骑行', 'a', '海边度假|自然风光', 'ma', 30, '', '🚲'],
+      ['曾厝垵', 's', '美食|城市漫步|拍照打卡', 'ae', 0, '', '🏘️'],
+      ['沙坡尾艺术区', 's', '拍照打卡|城市漫步', 'ae', 0, '', '🎨'],
+      ['厦门大学 · 芙蓉隧道', 's', '拍照打卡|历史人文', 'm', 0, '早起', '🎓'],
+      ['南普陀寺', 's', '历史人文', 'm', 0, '早起', '🛕'],
+      ['白城沙滩看日落', 's', '海边度假|拍照打卡', 'ae', 0, '', '🌅'],
+      ['植物园雨林喷雾', 's', '自然风光|拍照打卡', 'ma', 30, '爬山', '🌿'],
+      ['山海健康步道', 's', '自然风光|城市漫步', 'ma', 0, '爬山', '🥾'],
+      ['八市海鲜', 'f', '美食', 'ae', 120, '', '🦐'],
+      ['乌糖沙茶面', 'f', '美食', 'ma', 30, '', '🍜'],
+      ['海蛎煎 · 土笋冻', 'f', '美食', 'ae', 50, '', '🦪'],
+      ['黄厝沙滩躺平', 'a', '海边度假', 'a', 0, '', '🏖️'],
+      ['帆船出海', 'a', '海边度假|刺激项目', 'a', 180, '', '⛵'],
+      ['中山路夜市', 'n', '美食|城市漫步', 'e', 60, '夜生活', '🏮'],
+      ['海边精酿酒吧', 'n', '海边度假', 'e', 90, '夜生活', '🍻'],
+      ['双子塔观景台', 's', '拍照打卡', 'e', 120, '', '🌃'],
+      ['猫街 · 小众咖啡', 's', '城市漫步|拍照打卡', 'a', 40, '', '☕'],
+    ],
+    stays: [['曾厝垵青年旅舍', 'hostel', 90], ['中山路如家酒店', 'budget', 170], ['鼓浪屿海景民宿', 'bnb', 260], ['环岛路海景酒店', 'comfort', 320]],
+  },
+  西安: {
+    pois: [
+      ['秦始皇兵马俑', 's', '历史人文', 'm', 120, '早起|排队', '🗿'],
+      ['华清宫', 's', '历史人文|自然风光', 'a', 120, '', '🏯'],
+      ['城墙骑行', 'a', '历史人文|拍照打卡', 'ma', 54, '', '🚲'],
+      ['陕西历史博物馆', 's', '历史人文', 'm', 0, '早起|排队', '🏺'],
+      ['大雁塔 · 大唐不夜城', 'n', '历史人文|拍照打卡|城市漫步', 'e', 0, '', '🏮'],
+      ['回民街', 'f', '美食|城市漫步', 'ae', 60, '', '🥙'],
+      ['洒金桥小吃', 'f', '美食', 'ae', 50, '', '🍢'],
+      ['肉夹馍 · 冰峰', 'f', '美食', 'm', 25, '', '🥙'],
+      ['biangbiang 面', 'f', '美食', 'a', 30, '', '🍜'],
+      ['永兴坊摔碗酒', 'f', '美食|拍照打卡', 'e', 60, '', '🍶'],
+      ['《长恨歌》演出', 'a', '历史人文', 'e', 300, '', '🎭'],
+      ['华山', 's', '自然风光|刺激项目', 'm', 160, '早起|爬山', '⛰️'],
+      ['小雁塔 · 碑林', 's', '历史人文', 'ma', 65, '', '📜'],
+      ['汉服旅拍', 'a', '拍照打卡|历史人文', 'a', 150, '', '👘'],
+      ['钟鼓楼夜景', 's', '拍照打卡|城市漫步', 'e', 0, '', '🔔'],
+      ['易俗社文化街区', 's', '城市漫步|美食', 'ae', 0, '', '🏘️'],
+      ['大唐芙蓉园', 's', '历史人文|自然风光', 'a', 120, '', '🌸'],
+      ['书院门', 's', '历史人文|城市漫步', 'ma', 0, '', '🖌️'],
+    ],
+    stays: [['城墙根青年旅舍', 'hostel', 70], ['钟楼汉庭酒店', 'budget', 140], ['回民街四合院民宿', 'bnb', 180], ['大雁塔亚朵酒店', 'comfort', 240]],
+  },
+  重庆: {
+    pois: [
+      ['洪崖洞', 'n', '拍照打卡|城市漫步', 'e', 0, '', '🏮'],
+      ['李子坝轻轨穿楼', 's', '拍照打卡', 'm', 0, '', '🚝'],
+      ['长江索道', 'a', '拍照打卡|刺激项目', 'a', 30, '排队', '🚡'],
+      ['解放碑步行街', 's', '城市漫步', 'ae', 0, '', '🏙️'],
+      ['磁器口古镇', 's', '历史人文|美食', 'ma', 0, '', '🏘️'],
+      ['老火锅', 'f', '美食', 'e', 100, '', '🍲'],
+      ['重庆小面', 'f', '美食', 'm', 15, '', '🍜'],
+      ['南山一棵树夜景', 'n', '拍照打卡|自然风光', 'e', 30, '', '🌃'],
+      ['山城步道', 's', '城市漫步', 'ma', 0, '爬山', '🪜'],
+      ['鹅岭二厂', 's', '拍照打卡|城市漫步', 'a', 0, '', '📷'],
+    ],
+    stays: [['解放碑青年旅舍', 'hostel', 70], ['观音桥汉庭', 'budget', 150], ['山城江景民宿', 'bnb', 190], ['来福士亚朵', 'comfort', 250]],
+  },
+  大理: {
+    pois: [
+      ['洱海骑行', 'a', '自然风光|拍照打卡', 'ma', 50, '', '🚲'],
+      ['苍山索道', 's', '自然风光', 'm', 150, '爬山', '⛰️'],
+      ['大理古城', 's', '历史人文|城市漫步', 'ae', 0, '', '🏯'],
+      ['喜洲古镇', 's', '历史人文|拍照打卡', 'm', 0, '', '🌾'],
+      ['双廊日落', 's', '自然风光|拍照打卡', 'ae', 0, '', '🌅'],
+      ['菌子火锅', 'f', '美食', 'e', 100, '', '🍄'],
+      ['喜洲粑粑', 'f', '美食', 'm', 15, '', '🫓'],
+      ['人民路酒吧', 'n', '城市漫步', 'e', 80, '夜生活', '🎸'],
+      ['崇圣寺三塔', 's', '历史人文', 'a', 75, '', '🛕'],
+      ['海西生态廊道', 's', '自然风光|海边度假', 'a', 0, '', '🌊'],
+    ],
+    stays: [['古城青年旅舍', 'hostel', 60], ['古城如家酒店', 'budget', 130], ['洱海边民宿', 'bnb', 200], ['苍山脚下精品酒店', 'comfort', 260]],
+  },
+  青岛: {
+    pois: [
+      ['栈桥', 's', '海边度假|城市漫步', 'm', 0, '', '🌊'],
+      ['八大关', 's', '拍照打卡|历史人文', 'a', 0, '', '🏰'],
+      ['青岛啤酒博物馆', 'a', '美食|历史人文', 'a', 60, '', '🍺'],
+      ['金沙滩', 'a', '海边度假', 'a', 0, '', '🏖️'],
+      ['崂山', 's', '自然风光', 'm', 130, '早起|爬山', '⛰️'],
+      ['台东夜市', 'n', '美食', 'e', 60, '夜生活', '🏮'],
+      ['海鲜大排档', 'f', '美食', 'e', 120, '', '🦀'],
+      ['鲅鱼饺子', 'f', '美食', 'a', 40, '', '🥟'],
+      ['小麦岛日落', 's', '自然风光|拍照打卡', 'ae', 0, '', '🌅'],
+      ['天主教堂', 's', '拍照打卡|历史人文', 'm', 10, '', '⛪'],
+    ],
+    stays: [['大学路青年旅舍', 'hostel', 70], ['台东全季酒店', 'budget', 150], ['八大关老洋房民宿', 'bnb', 220], ['海景观景酒店', 'comfort', 280]],
+  },
+  长沙: {
+    pois: [
+      ['橘子洲头', 's', '历史人文|自然风光', 'm', 0, '', '🍊'],
+      ['岳麓山', 's', '自然风光', 'm', 0, '爬山', '⛰️'],
+      ['湖南博物院', 's', '历史人文', 'a', 0, '排队', '🏺'],
+      ['坡子街小吃', 'f', '美食', 'ae', 60, '', '🍢'],
+      ['超级文和友', 'f', '美食|拍照打卡', 'e', 90, '排队', '🦞'],
+      ['茶颜悦色打卡', 'f', '美食|城市漫步', 'a', 20, '排队', '🧋'],
+      ['五一广场夜生活', 'n', '城市漫步', 'e', 80, '夜生活', '🎉'],
+      ['太平老街', 's', '城市漫步|历史人文', 'a', 0, '', '🏮'],
+      ['长沙世界之窗', 'a', '刺激项目', 'a', 180, '排队', '🎢'],
+      ['谢子龙影像馆', 's', '拍照打卡', 'ma', 0, '', '📷'],
+    ],
+    stays: [['五一广场青旅', 'hostel', 60], ['黄兴路汉庭', 'budget', 130], ['湘江边民宿', 'bnb', 170], ['IFS 亚朵酒店', 'comfort', 230]],
+  },
+  三亚: {
+    pois: [
+      ['亚龙湾沙滩', 'a', '海边度假', 'a', 0, '', '🏖️'],
+      ['蜈支洲岛', 'a', '海边度假|刺激项目', 'm', 150, '早起', '🤿'],
+      ['天涯海角', 's', '拍照打卡|自然风光', 'a', 80, '', '🪨'],
+      ['南山文化旅游区', 's', '历史人文', 'm', 130, '', '🛕'],
+      ['第一市场海鲜', 'f', '美食', 'e', 130, '', '🦐'],
+      ['椰子鸡', 'f', '美食', 'ae', 80, '', '🥥'],
+      ['三亚湾日落', 's', '海边度假|拍照打卡', 'e', 0, '', '🌅'],
+      ['冲浪体验课', 'a', '刺激项目|海边度假', 'm', 200, '早起', '🏄'],
+      ['鸿洲码头夜市', 'n', '美食', 'e', 60, '夜生活', '🏮'],
+      ['大东海浮潜', 'a', '海边度假|刺激项目', 'a', 120, '', '🐠'],
+    ],
+    stays: [['大东海青年旅舍', 'hostel', 80], ['三亚湾经济酒店', 'budget', 180], ['海边椰林民宿', 'bnb', 280], ['亚龙湾度假酒店', 'comfort', 380]],
+  },
+};
+
+/** 自定义目的地没有专属资源库时，用通用模板兜底，保证任何团都能生成行程 */
+function genericPois(d) {
+  return {
+    pois: [
+      [`${d}老城区漫步`, 's', '城市漫步|历史人文', 'ma', 0, '', '🏘️'],
+      [`${d}博物馆`, 's', '历史人文', 'ma', 0, '排队', '🏺'],
+      [`${d}地标打卡`, 's', '拍照打卡', 'ae', 0, '', '📷'],
+      [`${d}特色小吃街`, 'f', '美食|城市漫步', 'ae', 60, '', '🥟'],
+      [`${d}招牌菜馆`, 'f', '美食', 'e', 100, '', '🍲'],
+      [`${d}早餐铺`, 'f', '美食', 'm', 20, '', '🥐'],
+      [`${d}郊野公园`, 's', '自然风光', 'm', 30, '爬山', '🌳'],
+      [`${d}夜市`, 'n', '美食|城市漫步', 'e', 50, '夜生活', '🏮'],
+      [`${d}特色体验`, 'a', '刺激项目|拍照打卡', 'a', 150, '', '🎟️'],
+      [`${d}日落观景点`, 's', '自然风光|拍照打卡', 'ae', 0, '', '🌅'],
+    ],
+    stays: [[`${d}青年旅舍`, 'hostel', 70], [`${d}连锁酒店`, 'budget', 150], [`${d}特色民宿`, 'bnb', 200], [`${d}精品酒店`, 'comfort', 260]],
+  };
+}
+
+const _poiCache = {};
+function getPoiLib(dest) {
+  if (_poiCache[dest]) return _poiCache[dest];
+  const raw = RAW_POIS[dest] || genericPois(dest);
+  const code = (DEST_META[dest] && DEST_META[dest].code) || 'X' + (hashStr(dest) % 1000);
+  const pois = raw.pois.map((r, i) => ({
+    id: `${code}-${i}`, destination: dest, name: r[0], type: r[1],
+    tags: r[2] ? r[2].split('|') : [], slots: r[3].split(''), cost: r[4],
+    conflicts: r[5] ? r[5].split('|') : [], emoji: r[6],
+  }));
+  const stays = raw.stays.map((r, i) => ({ id: `${code}-S${i}`, destination: dest, name: r[0], type: 'stay', tier: r[1], cost: r[2], emoji: '🛏️' }));
+  const byId = {};
+  [...pois, ...stays].forEach(p => { byId[p.id] = p; });
+  return (_poiCache[dest] = { pois, stays, byId });
+}
+function destEmoji(d) { return (DEST_META[d] && DEST_META[d].emoji) || '📍'; }
+function destCode(d) { return (DEST_META[d] && DEST_META[d].code) || 'GO!'; }
+
+/* ---- data/demo.js ---- */
+/* ============ data/demo.js · 示例数据（按算法反向设计：3 个团 + 2 人待调剂 + 2 人未填） ============ */
+const DEMO_CODE = 'GRAD26';
+const AVATARS = ['🦊', '🐯', '🐼', '🐻', '🐰', '🐱', '🐬', '🦌', '🐳', '🦩', '🐢', '🦁', '🐺', '🐨', '🐵', '🦄', '🐸', '🐧', '🐹', '🐮', '🐙', '🦉', '🐝', '🦭'];
+
+// [昵称, 头像, 起, 止, 天数, 预算, 志愿, 风格, 节奏, 住宿, 想同行, 不接受]
+const DEMO_PEOPLE = [
+  // 成都 · 美食
+  ['小林', '🦊', '06-20', '06-28', 5, [2000, 3000], ['成都', '重庆', '长沙'], ['美食', '城市漫步', '拍照打卡'], 'normal', 'budget', ['阿杰'], ['早起']],
+  ['阿杰', '🐯', '06-21', '06-27', 5, [2200, 2800], ['成都', '重庆', '西安'], ['美食', '城市漫步', '刺激项目'], 'normal', 'budget', ['小林'], []],
+  ['Momo', '🐼', '06-19', '06-26', 5, [1800, 3000], ['成都', '长沙', '重庆'], ['美食', '拍照打卡', '城市漫步'], 'normal', 'bnb', ['Kiki'], []],
+  ['大宇', '🐻', '06-22', '06-30', 5, [2000, 3200], ['成都', '西安', '重庆'], ['美食', '刺激项目', '自然风光'], 'rush', 'budget', [], []],
+  ['小雨', '🐰', '06-20', '06-27', 5, [2000, 2800], ['成都', '大理', '厦门'], ['美食', '城市漫步', '拍照打卡'], 'normal', 'comfort', ['Momo'], []],
+  ['Kiki', '🐱', '06-21', '06-29', 5, [2100, 3000], ['重庆', '成都', '长沙'], ['美食', '城市漫步'], 'normal', 'budget', ['Momo'], ['排队']],
+  // 厦门 · 海边
+  ['晴晴', '🐬', '06-29', '07-06', 5, [2500, 4000], ['厦门', '三亚', '青岛'], ['海边度假', '拍照打卡', '美食'], 'chill', 'bnb', ['小鹿'], ['早起']],
+  ['小鹿', '🦌', '06-30', '07-08', 5, [2800, 4200], ['厦门', '青岛', '三亚'], ['海边度假', '拍照打卡', '自然风光'], 'chill', 'bnb', ['晴晴'], []],
+  ['安安', '🐳', '07-01', '07-07', 5, [2500, 3800], ['厦门', '三亚', '大理'], ['海边度假', '美食', '拍照打卡'], 'chill', 'comfort', [], ['爬山']],
+  ['阿彬', '🦩', '06-30', '07-06', 5, [3000, 4500], ['三亚', '厦门', '青岛'], ['海边度假', '刺激项目', '拍照打卡'], 'normal', 'bnb', [], []],
+  ['七七', '🐢', '06-28', '07-05', 5, [2600, 3600], ['厦门', '大理', '青岛'], ['海边度假', '自然风光', '拍照打卡'], 'chill', 'bnb', [], ['早起']],
+  // 西安 · 人文
+  ['老周', '🦁', '06-16', '06-23', 5, [1500, 2500], ['西安', '长沙', '成都'], ['历史人文', '美食', '拍照打卡'], 'rush', 'hostel', ['浩然'], []],
+  ['浩然', '🐺', '06-17', '06-24', 5, [1600, 2400], ['西安', '成都', '重庆'], ['历史人文', '美食', '刺激项目'], 'rush', 'hostel', ['老周'], []],
+  ['一鸣', '🐨', '06-15', '06-22', 5, [1500, 2600], ['西安', '长沙', '大理'], ['历史人文', '拍照打卡', '城市漫步'], 'rush', 'budget', [], []],
+  ['子轩', '🐵', '06-17', '06-23', 5, [1400, 2300], ['西安', '重庆', '长沙'], ['历史人文', '美食'], 'normal', 'hostel', [], ['夜生活']],
+  ['思思', '🦄', '06-16', '06-22', 5, [1800, 2600], ['长沙', '西安', '成都'], ['历史人文', '拍照打卡', '美食'], 'rush', 'budget', [], []],
+  // 待调剂
+  ['小王', '🐸', '07-10', '07-13', 3, [2000, 3000], ['成都', '西安', '长沙'], ['美食', '城市漫步'], 'normal', 'budget', [], []],
+  ['阿乐', '🐧', '06-16', '06-25', 5, [800, 1200], ['西安', '长沙'], ['历史人文', '美食'], 'rush', 'hostel', [], []],
+];
+const DEMO_UNFILLED = [['阿May', '🐹'], ['大壮', '🐮']];
+
+function buildDemo(now = Date.now()) {
+  const trip = {
+    code: DEMO_CODE, name: '软工 3 班毕业旅行', dateRange: ['2026-06-15', '2026-07-15'], groupSize: [3, 8],
+    destinations: DEFAULT_DESTS.slice(), deadline: '2026-06-10', creatorId: null, createdAt: now,
+  };
+  const members = DEMO_PEOPLE.map((r, i) => ({
+    id: `m_demo${i + 1}`, tripCode: DEMO_CODE, nickname: r[0], avatar: r[1], joinedAt: now + i, prefUpdatedAt: now + i,
+    preference: {
+      availableDates: dateList('2026-' + r[2], '2026-' + r[3]), tripDays: r[4], budget: r[5],
+      destinations: r[6], anyDestination: false, styles: r[7], pace: r[8], stay: r[9],
+      buddies: [], dislikes: r[11], _buddyNames: r[10],
+    },
+  }));
+  const byName = Object.fromEntries(members.map(m => [m.nickname, m.id]));
+  members.forEach(m => { m.preference.buddies = m.preference._buddyNames.map(n => byName[n]).filter(Boolean); delete m.preference._buddyNames; });
+  DEMO_UNFILLED.forEach((r, i) => members.push({ id: `m_demoU${i + 1}`, tripCode: DEMO_CODE, nickname: r[0], avatar: r[1], joinedAt: now + 100 + i, preference: null }));
+  trip.creatorId = members[0].id;
+  return { trip, members };
+}
+
+/** 「模拟一位同学加入」：按示例中的几种画像随机生成，让新同学大概率能匹配上 */
+const MOCK_NAMES = ['橙子', '阿凯', '糖糖', '小北', '豆豆', 'Leo', '可乐', '阿泽', '苏苏', '大鹏', 'Yuki', '团子', '阿飞', '星星', '南南', '小满'];
+const MOCK_ARCHETYPES = [
+  { from: '06-20', to: '06-28', budget: [2000, 3000], dests: ['成都', '重庆', '长沙'], styles: ['美食', '城市漫步', '拍照打卡'], pace: 'normal', stay: 'budget' },
+  { from: '06-29', to: '07-06', budget: [2600, 3800], dests: ['厦门', '三亚', '青岛'], styles: ['海边度假', '拍照打卡'], pace: 'chill', stay: 'bnb' },
+  { from: '06-16', to: '06-23', budget: [1600, 2500], dests: ['西安', '长沙', '成都'], styles: ['历史人文', '美食'], pace: 'rush', stay: 'hostel' },
+  { from: '06-24', to: '07-03', budget: [2200, 3400], dests: ['大理', '重庆', '厦门'], styles: ['自然风光', '拍照打卡', '城市漫步'], pace: 'normal', stay: 'bnb' },
+];
+function makeMockMember(trip, existing, rand = Math.random) {
+  const used = new Set(existing.map(m => m.nickname));
+  const pool = MOCK_NAMES.filter(n => !used.has(n));
+  const nickname = pool.length ? pool[Math.floor(rand() * pool.length)] : `同学${existing.length + 1}`;
+  const a = MOCK_ARCHETYPES[Math.floor(rand() * MOCK_ARCHETYPES.length)];
+  const j = () => Math.round((rand() - 0.5) * 2);           // -1..1 天抖动
+  const year = trip.dateRange[0].slice(0, 4);
+  const clamp = s => s < trip.dateRange[0] ? trip.dateRange[0] : s > trip.dateRange[1] ? trip.dateRange[1] : s;
+  const from = clamp(addDays(`${year}-${a.from}`, j())), to = clamp(addDays(`${year}-${a.to}`, j()));
+  const dests = a.dests.filter(d => trip.destinations.includes(d));
+  const b = Math.round((rand() - 0.5) * 4) * 100;
+  return {
+    id: uid('m'), tripCode: trip.code, nickname, avatar: AVATARS[Math.floor(rand() * AVATARS.length)],
+    joinedAt: Date.now(), prefUpdatedAt: Date.now(),
+    preference: {
+      availableDates: dateList(from, to), tripDays: 5, budget: [a.budget[0] + b, a.budget[1] + b],
+      destinations: dests.length ? dests : trip.destinations.slice(0, 3), anyDestination: false,
+      styles: a.styles, pace: a.pace, stay: a.stay, buddies: [], dislikes: [],
+    },
+  };
+}
+
+/** 示例账单：其中一笔不是全员参与，用来演示部分分摊 */
+function demoExpenses(group, membersById, it) {
+  const ids = group.memberIds;
+  const n = ids.length;
+  const date0 = group.dateWindow ? group.dateWindow[0] : '2026-06-20';
+  const lib = getPoiLib(group.destination);
+  const stayName = it ? lib.byId[it.stayPoiId].name : '住宿';
+  const nights = Math.max(1, (group.days || 3) - 1);
+  const pick = k => ids[k % n];
+  const partial = ids.slice(0, Math.max(2, n - 2));
+  return [
+    { title: `住宿 · ${stayName}`, amount: n * nights * 150 * 100, category: '住宿', payerId: pick(0), participantIds: ids.slice(), date: date0 },
+    { title: '第一晚特色大餐', amount: n * 95 * 100, category: '餐饮', payerId: pick(1), participantIds: ids.slice(), date: date0 },
+    { title: '景点门票', amount: n * 60 * 100, category: '门票', payerId: pick(2), participantIds: ids.slice(), date: addDays(date0, 1) },
+    { title: 'KTV 欢唱（自愿参加）', amount: 24000, category: '其他', payerId: pick(3), participantIds: partial, date: addDays(date0, 1) },
+    { title: '打车去机场', amount: 8600, category: '交通', payerId: pick(0), participantIds: ids.slice(0, Math.min(3, n)), date: addDays(date0, Math.max(0, (group.days || 3) - 1)) },
+  ];
+}
+
+/* ---- core/match.js ---- */
+/* ============ core/match.js · 智能组队（规则加权评分 + 贪心分团 + 模板化解释） ============ */
+const RANK_W = [1, 0.7, 0.4];
+const MAX_W = { destination: 35, date: 20, budget: 20, style: 15, pace: 10 };
+const PACE_ORDER = { rush: 0, normal: 1, chill: 2 };
+const GROUP_NAME_BY_TAG = {
+  美食: '美食漫游', 自然风光: '山野治愈', 城市漫步: '街巷漫游', 拍照打卡: '出片打卡',
+  历史人文: '人文寻古', 海边度假: '海边撒野', 刺激项目: '心跳冒险',
+};
+
+function destWeight(p, d) {
+  if (p.anyDestination) return 0.6;
+  const i = p.destinations.indexOf(d);
+  return i >= 0 ? RANK_W[i] : 0;
+}
+
+/** 两两评分 */
+function scorePair(a, b, allDests) {
+  const pa = a.preference, pb = b.preference;
+  const run = longestRun(intersectDates([pa.availableDates, pb.availableDates]));
+  const need = Math.min(pa.tripDays, pb.tripDays);
+  const ovLo = Math.max(pa.budget[0], pb.budget[0]), ovHi = Math.min(pa.budget[1], pb.budget[1]);
+  const dateOk = run.len >= need, budgetOk = ovHi >= ovLo;
+
+  let best = 0, bestDest = null;
+  const cands = new Set([...(pa.anyDestination ? allDests : pa.destinations), ...(pb.anyDestination ? allDests : pb.destinations)]);
+  for (const d of cands) { const w = destWeight(pa, d) * destWeight(pb, d); if (w > best) { best = w; bestDest = d; } }
+
+  const destination = best * 35;
+  const date = Math.min(1, run.len / Math.max(pa.tripDays, pb.tripDays)) * 20;
+  const wA = Math.max(1, pa.budget[1] - pa.budget[0]), wB = Math.max(1, pb.budget[1] - pb.budget[0]);
+  const budget = Math.min(20, Math.max(0, ovHi - ovLo) / Math.min(wA, wB) * 20);
+  const sa = new Set(pa.styles);
+  const inter = pb.styles.filter(s => sa.has(s)).length;
+  const uni = new Set([...pa.styles, ...pb.styles]).size;
+  const style = uni ? inter / uni * 15 : 0;
+  const pd = Math.abs(PACE_ORDER[pa.pace] - PACE_ORDER[pb.pace]);
+  const pace = (pd === 0 ? 6 : pd === 1 ? 3 : 0) + (pa.stay === pb.stay ? 4 : 0);
+  const aw = pa.buddies.includes(b.id), bw = pb.buddies.includes(a.id);
+  const bonus = aw && bw ? 10 : (aw || bw ? 5 : 0);
+
+  const total = Math.min(100, destination + date + budget + style + pace + bonus);
+  return {
+    total, breakdown: { destination, date, budget, style, pace, bonus },
+    hardOk: dateOk && budgetOk, hardFail: !dateOk ? 'date' : (!budgetOk ? 'budget' : null), bestDest,
+  };
+}
+
+function groupDates(ms) { return intersectDates(ms.map(m => m.preference.availableDates)); }
+function groupBudget(ms) {
+  return [Math.max(...ms.map(m => m.preference.budget[0])), Math.min(...ms.map(m => m.preference.budget[1]))];
+}
+function groupFeasible(ms) {
+  const b = groupBudget(ms);
+  return longestRun(groupDates(ms)).len >= 3 && b[1] >= b[0];
+}
+function avgScore(m, others, dests) {
+  if (!others.length) return 0;
+  return others.reduce((s, o) => s + scorePair(m, o, dests).total, 0) / others.length;
+}
+function majorityPace(ms) {
+  const c = countBy(ms.map(m => m.preference.pace));
+  const max = Math.max(...Object.values(c));
+  const tops = Object.keys(c).filter(k => c[k] === max);
+  return tops.length > 1 && tops.includes('normal') ? 'normal' : tops[0];
+}
+
+/** 主函数：输入活动和成员，输出组队结果 */
+function matchTrip(trip, members) {
+  const filled = members.filter(m => m.preference);
+  const byId = Object.fromEntries(filled.map(m => [m.id, m]));
+  const dests = trip.destinations;
+  const cache = {};
+  const S = (x, y) => { const k = x < y ? x + '|' + y : y + '|' + x; return cache[k] || (cache[k] = scorePair(byId[x], byId[y], dests)); };
+  const avgWith = (id, ids) => ids.length ? ids.reduce((s, o) => s + S(id, o).total, 0) / ids.length : 0;
+  const [minS, maxS] = trip.groupSize;
+
+  // 目的地按热度排序
+  const pop = dests.map(d => ({ d, w: filled.reduce((s, m) => s + destWeight(m.preference, d), 0) }))
+    .sort((a, b) => b.w - a.w);
+
+  const assigned = new Set();
+  const raw = [];
+  for (const { d } of pop) {
+    const tried = new Set();
+    for (;;) {
+      const free = filled.filter(m => !assigned.has(m.id));
+      const cands = free.filter(m => destWeight(m.preference, d) > 0).map(m => m.id);
+      const seeds = free.filter(m => !m.preference.anyDestination && m.preference.destinations[0] === d && !tried.has(m.id)).map(m => m.id);
+      if (!seeds.length) break;
+      const seedScore = id => avgWith(id, cands.filter(c => c !== id));
+      seeds.sort((x, y) => seedScore(y) - seedScore(x));
+      const seed = seeds[0];
+      tried.add(seed);
+      const g = [seed];
+      while (g.length < maxS) {
+        let best = null, bs = -1;
+        for (const c of cands) {
+          if (g.includes(c)) continue;
+          if (!g.every(x => S(c, x).hardOk)) continue;
+          if (!groupFeasible([...g, c].map(i => byId[i]))) continue;
+          const sc = avgWith(c, g);
+          if (sc >= 60 && sc > bs) { bs = sc; best = c; }
+        }
+        if (!best) break;
+        g.push(best);
+      }
+      if (g.length >= minS) { g.forEach(i => assigned.add(i)); raw.push({ destination: d, memberIds: g }); }
+    }
+  }
+
+  // 剩余成员尝试插入现有团
+  for (const m of filled.filter(m => !assigned.has(m.id))) {
+    let best = null, bs = -1;
+    for (const g of raw) {
+      if (g.memberIds.length >= maxS) continue;
+      if (!g.memberIds.every(x => S(m.id, x).hardOk)) continue;
+      if (!groupFeasible([...g.memberIds, m.id].map(i => byId[i]))) continue;
+      const sc = avgWith(m.id, g.memberIds);
+      if (sc >= 50 && sc > bs) { bs = sc; best = g; }
+    }
+    if (best) { best.memberIds.push(m.id); assigned.add(m.id); }
+  }
+
+  const groups = raw.map((g, i) => recomputeGroup({
+    id: uid('g'), tripCode: trip.code, index: i + 1, destination: g.destination,
+    memberIds: g.memberIds, confirmedIds: [],
+  }, byId, trip));
+  return { tripCode: trip.code, groups, createdAt: Date.now(), stale: false };
+}
+
+/** 未分配成员：诊断原因并给出建议团 */
+function diagnoseUnmatched(m, groups, byId, trip, matchCreatedAt) {
+  let suggest = null, bestScore = -1;
+  for (const g of groups) {
+    const p = predictScore(m, g, byId, trip);
+    const full = g.memberIds.length >= trip.groupSize[1];
+    const rank = p.score + (p.hardOk ? 1000 : 0);   // 优先推荐没有硬冲突的团
+    if (!full && rank > bestScore) { bestScore = rank; suggest = { groupId: g.id, score: p.score, hardOk: p.hardOk }; }
+  }
+  if (matchCreatedAt && (m.prefUpdatedAt || 0) > matchCreatedAt) {
+    return { reason: '匹配之后才填写偏好，重新匹配会自动分团', suggest };
+  }
+  if (!groups.length) return { reason: '目前填写的同学还不够组成一个团', suggest };
+  let allDate = true, allBudget = true;
+  for (const g of groups) {
+    const ms = g.memberIds.map(i => byId[i]).filter(Boolean);
+    if (!ms.length) continue;
+    const run = longestRun(intersectDates([groupDates(ms), m.preference.availableDates])).len;
+    const gb = groupBudget(ms);
+    if (run >= 3) allDate = false;
+    if (Math.min(gb[1], m.preference.budget[1]) >= Math.max(gb[0], m.preference.budget[0])) allBudget = false;
+  }
+  const reason = allDate ? '可出行日期与现有团重叠不足 3 天'
+    : allBudget ? '预算区间与现有团差距较大'
+    : '暂时没有特别合拍的团，可以手动选择';
+  return { reason, suggest };
+}
+
+/** 换团弹窗：某人加入某团后的预计匹配度 */
+function predictScore(m, g, byId, trip) {
+  const others = g.memberIds.filter(i => i !== m.id).map(i => byId[i]).filter(Boolean);
+  if (!others.length) return { score: 0, hardOk: true };
+  const res = others.map(o => scorePair(m, o, trip.destinations));
+  const score = Math.round(res.reduce((s, r) => s + r.total, 0) / res.length);
+  const fail = res.find(r => !r.hardOk);
+  return { score, hardOk: !fail, hardFail: fail ? fail.hardFail : null };
+}
+
+/** 重算团的全部展示属性：日期、预算、匹配度、理由、风险 */
+function recomputeGroup(group, byId, trip) {
+  const ms = group.memberIds.map(i => byId[i]).filter(m => m && m.preference);
+  const n = ms.length, d = group.destination;
+  const run = longestRun(groupDates(ms));
+  const want = Number(modeOf(ms.map(m => m.preference.tripDays), 5));
+  const days = run.len ? Math.min(want, run.len) : 0;
+  const dateWindow = days ? [run.start, addDays(run.start, days - 1)] : null;
+  const budgetRange = n ? groupBudget(ms) : [0, 0];
+  const budgetOk = budgetRange[1] >= budgetRange[0];
+
+  // 两两得分
+  const pairs = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) pairs.push({ a: ms[i], b: ms[j], r: scorePair(ms[i], ms[j], trip.destinations) });
+  const breakdown = { destination: 0, date: 0, budget: 0, style: 0, pace: 0, bonus: 0 };
+  pairs.forEach(p => Object.keys(breakdown).forEach(k => { breakdown[k] += p.r.breakdown[k] / pairs.length; }));
+  const score = pairs.length ? Math.round(pairs.reduce((s, p) => s + p.r.total, 0) / pairs.length) : 0;
+
+  let leaderId = group.leaderId && group.memberIds.includes(group.leaderId) ? group.leaderId : null;
+  if (!leaderId && n) {
+    leaderId = ms.map(m => ({ id: m.id, s: avgScore(m, ms.filter(o => o !== m), trip.destinations) }))
+      .sort((x, y) => y.s - x.s)[0].id;
+  }
+
+  // 风格统计
+  const tagCount = countBy(ms.flatMap(m => m.preference.styles));
+  const tagsSorted = Object.entries(tagCount).sort((x, y) => y[1] - x[1]);
+  const pace = n ? majorityPace(ms) : 'normal';
+  let flavor = tagsSorted.length ? GROUP_NAME_BY_TAG[tagsSorted[0][0]] : '快乐出发';
+  if (tagsSorted.length && tagsSorted[0][0] === '海边度假' && pace === 'chill') flavor = '海风躺平';
+  const name = `${d}·${flavor}团`;
+
+  // ---- 推荐理由 ----
+  const R = [];
+  if (dateWindow) R.push({ k: 9, t: `${n} 人都能在 ${fmtMD(dateWindow[0])}–${fmtMD(dateWindow[1])} 出行，共同空档 ${run.len} 天` });
+  const rankCount = [0, 0, 0]; let anyCount = 0;
+  ms.forEach(m => { if (m.preference.anyDestination) anyCount++; else { const i = m.preference.destinations.indexOf(d); if (i >= 0) rankCount[i]++; } });
+  if (rankCount[0] >= Math.ceil(n / 2)) {
+    let t = `${rankCount[0]} 人首选${d}`;
+    if (rankCount[1]) t += `，${rankCount[1]} 人次选${d}`;
+    if (anyCount) t += `，${anyCount} 人去哪都行`;
+    R.push({ k: breakdown.destination / 35 + 0.3, t });
+  }
+  if (budgetOk && breakdown.budget / 20 >= 0.6) R.push({ k: breakdown.budget / 20, t: `人均预算集中在 ¥${budgetRange[0]}–${budgetRange[1]}，差距小` });
+  const sharedTags = tagsSorted.filter(([, c]) => c >= Math.ceil(n * 0.6));
+  if (sharedTags.length) {
+    R.push({ k: breakdown.style / 15 + 0.35, t: sharedTags.slice(0, 2).map(([t, c]) => `${c} 人选了「${t}」`).join('，') });
+  }
+  if (n > 1 && ms.every(m => m.preference.pace === ms[0].preference.pace)) R.push({ k: 0.9, t: `节奏都是「${PACE_LABEL[ms[0].preference.pace]}」，不会互相拖累` });
+  const mutual = pairs.filter(p => p.a.preference.buddies.includes(p.b.id) && p.b.preference.buddies.includes(p.a.id));
+  mutual.slice(0, 2).forEach(p => R.push({ k: 0.95, t: `${p.a.nickname}和${p.b.nickname}互选同行` }));
+  const reasons = R.sort((x, y) => y.k - x.k).slice(0, 5).map(x => x.t);
+
+  // ---- 风险提示 ----
+  const W = [];
+  const conflictNames = [];
+  ms.forEach(m => {
+    const f = ms.filter(o => o !== m).map(o => scorePair(m, o, trip.destinations)).find(r => !r.hardOk);
+    if (f) conflictNames.push({ m, type: f.hardFail });
+  });
+  if (!budgetOk) W.push('⚠ 团内预算没有交集，建议先商量人均标准');
+  if (run.len < 3) W.push('⚠ 共同空档不足 3 天，需要重新协商日期');
+  conflictNames.slice(0, 2).forEach(({ m, type }) => W.push(`⚠ ${m.nickname}与团内${type === 'date' ? '可出行日期' : '预算'}不完全匹配`));
+  ms.filter(m => m.preference.pace !== pace).slice(0, 1).forEach(m =>
+    W.push(`${m.nickname}偏好「${PACE_LABEL[m.preference.pace]}」节奏，大家多为「${PACE_LABEL[pace]}」，行程里会留出自由活动时间`));
+  if (budgetOk && budgetRange[1] - budgetRange[0] < 300) W.push('有成员预算接近区间边缘，行程会优先选择经济型住宿');
+  ms.forEach(m => {
+    if (m.preference.anyDestination) return;
+    const i = m.preference.destinations.indexOf(d);
+    if (i === 2) W.push(`${m.nickname}的第三志愿是${d}，出发前可以再确认一下`);
+    if (i === -1) W.push(`${m.nickname}没有选${d}，记得问问 TA 的想法`);
+  });
+
+  return {
+    ...group, name, days, dateWindow, budgetRange, budgetOk, runLen: run.len, score, breakdown, leaderId, pace,
+    confirmedIds: (group.confirmedIds || []).filter(i => group.memberIds.includes(i)),
+    reasons, warnings: W.slice(0, 4),
+  };
+}
+
+/* ---- core/itinerary.js ---- */
+/* ============ core/itinerary.js · 行程生成（团画像 × 节奏模板 × 资源库打分） ============ */
+const DAILY_FOOD_BASE = 60;   // 行程外的基础餐费 / 人 / 天
+const DAILY_TRANSPORT = 30;   // 市内交通 / 人 / 天
+
+function groupProfile(ms) {
+  const tagWeight = countBy(ms.flatMap(m => m.preference.styles));
+  const exclusions = [...new Set(ms.flatMap(m => m.preference.dislikes))];
+  const pace = ms.length ? majorityPace(ms) : 'normal';
+  const stayMode = modeOf(ms.map(m => m.preference.stay), 'budget');
+  return { tagWeight, exclusions, pace, stayMode, size: ms.length };
+}
+
+function slotsForPace(pace) {
+  return pace === 'rush' ? ['m', 'a', 'e', 'n'] : ['m', 'a', 'e'];
+}
+function poiFitsSlot(p, slot) {
+  if (slot === 'n') return p.slots.includes('e') && (p.type === 'n' || p.type === 'f');
+  return p.slots.includes(slot);
+}
+function poiConflicts(p, prof) { return p.conflicts.some(c => prof.exclusions.includes(c)); }
+function poiScore(p, prof, slot) {
+  let s = p.tags.reduce((t, x) => t + (prof.tagWeight[x] || 0), 0);
+  if (slot === 'e' && p.type === 'f') s += 2;
+  if ((slot === 'm' || slot === 'a') && p.type === 'f') s -= 1;
+  if (slot === 'n' && p.type === 'n') s += 1;
+  return s;
+}
+function reasonFor(p, prof, relaxed) {
+  const top = p.tags.map(t => [t, prof.tagWeight[t] || 0]).sort((a, b) => b[1] - a[1])[0];
+  let r = top && top[1] > 0 ? `团里 ${top[1]} 人选了「${top[0]}」`
+    : ({ f: '当地特色，顺路尝一尝', s: '目的地经典打卡点', a: '换换节奏的体验项目', n: '看看城市的夜晚' }[p.type]);
+  if (relaxed) r += '（同类可选项不多，已尽量照顾大家）';
+  return r;
+}
+
+/** 从资源库中为某时段挑一个 POI */
+function pickPoi(lib, slot, used, prof, rand, exclude = [], preferType = null) {
+  const base = lib.pois.filter(p => poiFitsSlot(p, slot) && !used.has(p.id) && !exclude.includes(p.id));
+  let c = base.filter(p => !poiConflicts(p, prof)), relaxed = false;
+  if (!c.length && base.length) { c = base; relaxed = true; }
+  if (!c.length) return null;
+  let best = null, bs = -Infinity;
+  for (const p of c) {
+    const s = poiScore(p, prof, slot) + (preferType && p.type === preferType ? 3 : 0) + rand() * 0.5;
+    if (s > bs) { bs = s; best = p; }
+  }
+  return { poi: best, relaxed };
+}
+
+function pickStay(lib, budgetRange, stayMode) {
+  const mid = (budgetRange[0] + budgetRange[1]) / 2;
+  const tiers = mid < 2000 ? ['hostel', 'budget'] : mid <= 3500 ? ['budget', 'bnb', 'comfort'] : ['bnb', 'comfort'];
+  const pool = lib.stays.filter(s => tiers.includes(s.tier));
+  return pool.find(s => s.tier === stayMode) || pool[Math.floor(pool.length / 2)] || lib.stays[0];
+}
+
+function newItem(slot, extra) {
+  return { id: uid('it'), slot, poiId: null, fixed: null, reason: '', votes: {}, tried: [], ...extra };
+}
+
+/** 主函数：生成整团行程 */
+function generateItinerary(group, ms, seed) {
+  const lib = getPoiLib(group.destination);
+  const prof = groupProfile(ms);
+  const s = seed == null ? hashStr(group.id) : seed;
+  const rand = seededRandom(s);
+  const days = Math.max(group.days || 3, 1);
+  const start = group.dateWindow ? group.dateWindow[0] : '2026-06-20';
+  const used = new Set();
+  const dayPlans = [];
+
+  for (let di = 0; di < days; di++) {
+    const items = [];
+    for (const slot of slotsForPace(prof.pace)) {
+      const isLast = di === days - 1;
+      if (di === 0 && slot === 'm') { items.push(newItem(slot, { fixed: { title: '抵达 & 办理入住', emoji: '🧳', note: '先把行李放下，轻装出发' } })); continue; }
+      if (isLast && slot === 'n') continue;
+      if (isLast && slot === 'e' && days > 1) { items.push(newItem(slot, { fixed: { title: '收拾行李，返程', emoji: '🚄', note: '记得带上纪念品和照片' } })); continue; }
+      if (prof.pace === 'chill' && slot === 'm') { items.push(newItem(slot, { fixed: { title: '睡到自然醒', emoji: '😴', note: '团里多数人选了「躺平」节奏' } })); continue; }
+      const r = pickPoi(lib, slot, used, prof, rand);
+      if (r) { used.add(r.poi.id); items.push(newItem(slot, { poiId: r.poi.id, reason: reasonFor(r.poi, prof, r.relaxed) })); }
+      else items.push(newItem(slot, { reason: '自由活动' }));
+    }
+    dayPlans.push({ date: addDays(start, di), items });
+  }
+  const stay = pickStay(lib, group.budgetRange || [2000, 3000], prof.stayMode);
+  const it = {
+    groupId: group.id, destination: group.destination, days: dayPlans, stayPoiId: stay.id, profile: prof,
+    seed: s, memberSig: group.memberIds.slice().sort().join(','), generatedAt: Date.now(),
+  };
+  it.estimate = estimateItinerary(it);
+  return it;
+}
+
+function estimateItinerary(it) {
+  const lib = getPoiLib(it.destination);
+  const days = it.days.length;
+  let tickets = 0, food = 0;
+  it.days.forEach(d => d.items.forEach(item => {
+    const p = item.poiId && lib.byId[item.poiId];
+    if (!p) return;
+    if (p.type === 'f') food += p.cost; else tickets += p.cost;
+  }));
+  food += DAILY_FOOD_BASE * days;
+  const stayP = lib.byId[it.stayPoiId];
+  const stay = stayP ? stayP.cost * Math.max(1, days - 1) : 0;
+  const transport = DAILY_TRANSPORT * days;
+  return { stay, food, tickets, transport, total: stay + food + tickets + transport };
+}
+
+function usedPoiIds(it) {
+  return new Set(it.days.flatMap(d => d.items.map(i => i.poiId)).filter(Boolean));
+}
+function mapItem(it, dayIdx, itemId, fn) {
+  const days = it.days.map((d, i) => i !== dayIdx ? d : { ...d, items: d.items.map(x => x.id === itemId ? fn(x) : x) });
+  const next = { ...it, days };
+  next.estimate = estimateItinerary(next);
+  return next;
+}
+function findItem(it, dayIdx, itemId) { return it.days[dayIdx].items.find(x => x.id === itemId); }
+
+/** 🔄 换一个同类：资源用尽时返回 null */
+function replaceItem(it, dayIdx, itemId) {
+  const lib = getPoiLib(it.destination);
+  const item = findItem(it, dayIdx, itemId);
+  if (!item || item.fixed) return null;
+  const cur = item.poiId && lib.byId[item.poiId];
+  const tried = [...(item.tried || []), ...(item.poiId ? [item.poiId] : [])];
+  const rand = seededRandom(hashStr(item.id + tried.length));
+  const r = pickPoi(lib, item.slot, usedPoiIds(it), it.profile, rand, tried, cur ? cur.type : null);
+  if (!r) return null;
+  return mapItem(it, dayIdx, itemId, x => ({ ...x, poiId: r.poi.id, reason: reasonFor(r.poi, it.profile, r.relaxed), tried, votes: {} }));
+}
+/** 🗑 删除 → 变成自由活动 */
+function removeItem(it, dayIdx, itemId) {
+  return mapItem(it, dayIdx, itemId, x => ({ ...x, poiId: null, reason: '自由活动', votes: {}, tried: [] }));
+}
+/** + 添加：候选列表与插入 */
+function addCandidates(it, dayIdx, itemId) {
+  const lib = getPoiLib(it.destination);
+  const item = findItem(it, dayIdx, itemId);
+  const used = usedPoiIds(it);
+  return lib.pois.filter(p => poiFitsSlot(p, item.slot) && !used.has(p.id))
+    .map(p => ({ poi: p, score: poiScore(p, it.profile, item.slot), conflict: poiConflicts(p, it.profile) }))
+    .sort((a, b) => (a.conflict - b.conflict) || (b.score - a.score));
+}
+function addItem(it, dayIdx, itemId, poiId) {
+  const p = getPoiLib(it.destination).byId[poiId];
+  return mapItem(it, dayIdx, itemId, x => ({ ...x, poiId, reason: reasonFor(p, it.profile, false) + ' · 手动添加', votes: {}, tried: [] }));
+}
+/** 👍/👎：同一票再点一次为撤销 */
+function voteItem(it, dayIdx, itemId, memberId, v) {
+  return mapItem(it, dayIdx, itemId, x => {
+    const votes = { ...x.votes };
+    if (votes[memberId] === v) delete votes[memberId]; else votes[memberId] = v;
+    return { ...x, votes };
+  });
+}
+/** 住宿：换一家（循环） / 换更便宜的 */
+function nextStay(it) {
+  const lib = getPoiLib(it.destination);
+  const list = lib.stays.slice().sort((a, b) => a.cost - b.cost);
+  const i = list.findIndex(s => s.id === it.stayPoiId);
+  const next = { ...it, stayPoiId: list[(i + 1) % list.length].id };
+  next.estimate = estimateItinerary(next);
+  return next;
+}
+function cheaperStay(it) {
+  const lib = getPoiLib(it.destination);
+  const cur = lib.byId[it.stayPoiId];
+  const cheaper = lib.stays.filter(s => s.cost < cur.cost).sort((a, b) => b.cost - a.cost)[0];
+  if (!cheaper) return null;
+  const next = { ...it, stayPoiId: cheaper.id };
+  next.estimate = estimateItinerary(next);
+  return next;
+}
+
+/** 文字版行程（复制到群里） */
+function itineraryText(it, group, membersById) {
+  const lib = getPoiLib(it.destination);
+  const lines = [`【${group.name}】${fmtMD(group.dateWindow ? group.dateWindow[0] : it.days[0].date)}–${fmtMD(it.days[it.days.length - 1].date)} · ${group.memberIds.length} 人`];
+  lines.push(`成员：${group.memberIds.map(i => membersById[i] ? membersById[i].nickname : '').join('、')}`);
+  lines.push(`住宿：${lib.byId[it.stayPoiId].name}`);
+  it.days.forEach((d, i) => {
+    lines.push('', `Day ${i + 1}（${fmtMD(d.date)} 周${weekdayCN(d.date)}）`);
+    d.items.forEach(x => {
+      const p = x.poiId && lib.byId[x.poiId];
+      const title = x.fixed ? x.fixed.title : p ? `${p.name}${p.cost ? `（约 ¥${p.cost}/人）` : ''}` : '自由活动';
+      lines.push(`  ${SLOT_LABEL[x.slot]}：${title}`);
+    });
+  });
+  lines.push('', `预计人均：¥${it.estimate.total}（不含往返大交通）`, '—— 来自 GradTrip 毕旅搭子');
+  return lines.join('\n');
+}
+
+/* ---- core/settle.js ---- */
+/* ============ core/settle.js · AA 分摊与最少转账（金额单位：分） ============ */
+
+/** 每人：已垫付 / 应承担 / 差额（net > 0 应收，< 0 应付） */
+function computeBalances(expenses, memberIds) {
+  const ids = new Set(memberIds);
+  expenses.forEach(e => { ids.add(e.payerId); e.participantIds.forEach(p => ids.add(p)); });
+  const bal = {};
+  ids.forEach(id => { bal[id] = { paid: 0, owed: 0, net: 0 }; });
+  for (const e of expenses) {
+    const ps = e.participantIds.slice().sort();
+    if (!ps.length) continue;
+    const share = Math.floor(e.amount / ps.length);
+    const rem = e.amount - share * ps.length;      // 余数逐分分给排序靠前的人，总额精确
+    bal[e.payerId].paid += e.amount;
+    ps.forEach((p, i) => { bal[p].owed += share + (i < rem ? 1 : 0); });
+  }
+  Object.values(bal).forEach(b => { b.net = b.paid - b.owed; });
+  return bal;
+}
+
+/** 贪心：最大债务人转给最大债权人，笔数 ≤ n-1 */
+function settle(balances) {
+  const cred = [], debt = [];
+  Object.entries(balances).forEach(([id, b]) => {
+    if (b.net > 0) cred.push({ id, amt: b.net });
+    else if (b.net < 0) debt.push({ id, amt: -b.net });
+  });
+  const sorter = (a, b) => (b.amt - a.amt) || (a.id < b.id ? -1 : 1);
+  const out = [];
+  while (cred.length && debt.length) {
+    cred.sort(sorter); debt.sort(sorter);
+    const c = cred[0], d = debt[0];
+    const amt = Math.min(c.amt, d.amt);
+    out.push({ from: d.id, to: c.id, amount: amt });
+    c.amt -= amt; d.amt -= amt;
+    if (!c.amt) cred.shift();
+    if (!d.amt) debt.shift();
+  }
+  return out;
+}
+function transferKey(t) { return `${t.from}->${t.to}:${t.amount}`; }
+
+/* ---- store.js ---- */
+/* ============ store.js · 全局状态 + localStorage 持久化 + 所有业务动作 ============ */
+const STORE_KEY = 'gradtrip.v1';
+
+function emptyState() {
+  return { trips: {}, members: {}, matches: {}, itineraries: {}, expenses: {}, paid: {}, current: {}, lastTrip: null };
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return Object.assign(emptyState(), JSON.parse(raw));
+  } catch (e) { /* 隐私模式等：退回内存状态 */ }
+  return emptyState();
+}
+let S = loadState();
+function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
+
+/* ---------- 查询 ---------- */
+const Q = {
+  trip: code => S.trips[code],
+  members: code => Object.values(S.members).filter(m => m.tripCode === code).sort((a, b) => a.joinedAt - b.joinedAt),
+  filled: code => Q.members(code).filter(m => m.preference),
+  byId: code => Object.fromEntries(Q.members(code).map(m => [m.id, m])),
+  me: code => S.members[S.current[code]] || null,
+  match: code => S.matches[code] || null,
+  group: (code, gid) => { const m = S.matches[code]; return m ? m.groups.find(g => g.id === gid) : null; },
+  groupOf: (code, mid) => { const m = S.matches[code]; return m ? m.groups.find(g => g.memberIds.includes(mid)) : null; },
+  unmatched: code => {
+    const match = S.matches[code]; if (!match) return [];
+    const trip = S.trips[code];
+    const inG = new Set(match.groups.flatMap(g => g.memberIds));
+    const byId = Q.byId(code);
+    return Q.filled(code).filter(m => !inG.has(m.id)).map(m => ({ member: m, ...diagnoseUnmatched(m, match.groups, byId, trip, match.createdAt) }));
+  },
+  expenses: gid => Object.values(S.expenses).filter(e => e.groupId === gid).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt)),
+};
+
+/* ---------- 动作 ---------- */
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c;
+  do { c = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(''); } while (S.trips[c]);
+  return c;
+}
+
+const Store = {
+  createTrip(f) {
+    const code = genCode();
+    const creator = { id: uid('m'), tripCode: code, nickname: f.nickname.trim(), avatar: f.avatar || '🦊', joinedAt: Date.now(), preference: null };
+    S.trips[code] = {
+      code, name: f.name.trim(), dateRange: [f.start, f.end], groupSize: [f.min, f.max],
+      destinations: f.dests.slice(), deadline: f.deadline || '', creatorId: creator.id, createdAt: Date.now(),
+    };
+    S.members[creator.id] = creator;
+    S.current[code] = creator.id;
+    S.lastTrip = code;
+    persist();
+    return code;
+  },
+
+  /** 保存偏好：memberId 为空时新建成员 */
+  savePreference(code, memberId, draft) {
+    const pref = {
+      availableDates: draft.availableDates.slice().sort(), tripDays: draft.tripDays, budget: draft.budget.slice(),
+      destinations: draft.anyDestination ? [] : draft.destinations.slice(), anyDestination: draft.anyDestination,
+      styles: draft.styles.slice(), pace: draft.pace, stay: draft.stay, buddies: draft.buddies.slice(), dislikes: draft.dislikes.slice(),
+    };
+    let m = memberId && S.members[memberId];
+    if (m) {
+      m.nickname = draft.nickname.trim(); m.avatar = draft.avatar; m.preference = pref; m.prefUpdatedAt = Date.now();
+    } else {
+      m = { id: uid('m'), tripCode: code, nickname: draft.nickname.trim(), avatar: draft.avatar, joinedAt: Date.now(), prefUpdatedAt: Date.now(), preference: pref };
+      S.members[m.id] = m;
+    }
+    S.current[code] = m.id;
+    S.lastTrip = code;
+    const match = S.matches[code];
+    if (match) { match.stale = true; Store._refresh(code); }
+    persist();
+    return m.id;
+  },
+
+  loadDemo() {
+    Store._wipeTrip(DEMO_CODE);
+    const { trip, members } = buildDemo();
+    S.trips[trip.code] = trip;
+    members.forEach(m => { S.members[m.id] = m; });
+    S.current[trip.code] = trip.creatorId;
+    S.lastTrip = trip.code;
+    persist();
+    return trip.code;
+  },
+
+  addMockMember(code) {
+    const m = makeMockMember(S.trips[code], Q.members(code));
+    S.members[m.id] = m;
+    if (S.matches[code]) S.matches[code].stale = true;
+    persist();
+    return m;
+  },
+
+  setCurrent(code, mid) { S.current[code] = mid; persist(); },
+
+  runMatch(code) {
+    const old = S.matches[code];
+    if (old) old.groups.forEach(g => Store._wipeGroup(g.id));
+    S.matches[code] = matchTrip(S.trips[code], Q.members(code));
+    persist();
+    return S.matches[code];
+  },
+
+  /** 成员或偏好变化后，重算所有团的属性 */
+  _refresh(code) {
+    const match = S.matches[code]; if (!match) return;
+    const byId = Q.byId(code), trip = S.trips[code];
+    match.groups = match.groups.map(g => recomputeGroup({ ...g, memberIds: g.memberIds.filter(i => byId[i] && byId[i].preference) }, byId, trip));
+  },
+
+  moveMember(code, mid, toGid) {
+    const match = S.matches[code];
+    match.groups.forEach(g => { g.memberIds = g.memberIds.filter(i => i !== mid); g.confirmedIds = g.confirmedIds.filter(i => i !== mid); if (g.leaderId === mid) g.leaderId = null; });
+    if (toGid) {
+      const g = match.groups.find(x => x.id === toGid);
+      g.memberIds.push(mid);
+      g.confirmedIds.push(mid);   // 主动换入 = 确认加入
+    }
+    Store._refresh(code);
+    persist();
+  },
+
+  toggleConfirm(code, gid, mid) {
+    const g = Q.group(code, gid);
+    if (g.confirmedIds.includes(mid)) g.confirmedIds = g.confirmedIds.filter(i => i !== mid);
+    else g.confirmedIds.push(mid);
+    persist();
+    return g.confirmedIds.length === g.memberIds.length;
+  },
+
+  generatePlan(code, gid, fresh) {
+    const g = Q.group(code, gid);
+    const byId = Q.byId(code);
+    const seed = fresh ? Math.floor(Math.random() * 1e9) : undefined;
+    S.itineraries[gid] = generateItinerary(g, g.memberIds.map(i => byId[i]).filter(m => m && m.preference), seed);
+    persist();
+    return S.itineraries[gid];
+  },
+  setPlan(gid, it) { if (it) { S.itineraries[gid] = it; persist(); } return !!it; },
+
+  upsertExpense(gid, e) {
+    const id = e.id || uid('e');
+    S.expenses[id] = { ...e, id, groupId: gid, createdAt: e.createdAt || Date.now() };
+    const reset = Store._checkPaid(gid);
+    persist();
+    return reset;
+  },
+  deleteExpense(gid, id) { delete S.expenses[id]; const r = Store._checkPaid(gid); persist(); return r; },
+  importDemoExpenses(code, gid) {
+    const g = Q.group(code, gid);
+    demoExpenses(g, Q.byId(code), S.itineraries[gid]).forEach((e, i) => {
+      const id = uid('e');
+      S.expenses[id] = { ...e, id, groupId: gid, createdAt: Date.now() + i };
+    });
+    Store._checkPaid(gid);
+    persist();
+  },
+  /** 账单变化导致结算方案变化时，清空已转标记；返回是否清空 */
+  _checkPaid(gid) {
+    const paid = S.paid[gid] || [];
+    if (!paid.length) return false;
+    const code = Object.keys(S.matches).find(c => S.matches[c].groups.some(g => g.id === gid));
+    const g = code && Q.group(code, gid);
+    const keys = new Set(settle(computeBalances(Q.expenses(gid), g ? g.memberIds : [])).map(transferKey));
+    if (paid.some(k => !keys.has(k))) { S.paid[gid] = []; return true; }
+    return false;
+  },
+  togglePaid(gid, key) {
+    const list = S.paid[gid] || [];
+    S.paid[gid] = list.includes(key) ? list.filter(k => k !== key) : [...list, key];
+    persist();
+  },
+
+  _wipeGroup(gid) {
+    delete S.itineraries[gid];
+    delete S.paid[gid];
+    Object.keys(S.expenses).forEach(k => { if (S.expenses[k].groupId === gid) delete S.expenses[k]; });
+  },
+  _wipeTrip(code) {
+    if (S.matches[code]) S.matches[code].groups.forEach(g => Store._wipeGroup(g.id));
+    delete S.matches[code];
+    Object.keys(S.members).forEach(k => { if (S.members[k].tripCode === code) delete S.members[k]; });
+    delete S.trips[code];
+    delete S.current[code];
+  },
+  resetAll() { S = emptyState(); try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ } },
+};
+
+/* ---- ui/kit.js ---- */
+/* ============ ui/kit.js · 通用 UI 工具：转义、Toast、复制、彩带、弹层、头像 ============ */
+const ui = {
+  modal: null,        // { type, ...payload }
+  dock: false,
+  codeOpen: false, codeVal: '', codeErr: '',
+  joinIntent: null,   // 'new' = 从邀请码进入，填写全新偏好
+  create: null, join: null,
+  matchAnim: null,    // { step }
+  openDetail: {},     // 组队卡片展开状态
+  day: {},            // groupId → 当前 Day
+  splitTab: 'bills',
+  planAnim: false,
+  celebrated: {},
+};
+const A = {};    // 点击动作：data-act
+const IN = {};   // 输入事件：data-in
+const CH = {};   // change 事件：data-ch
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function attr(o) { return Object.entries(o).filter(([, v]) => v != null && v !== false).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' '); }
+
+function toast(msg) {
+  const box = document.getElementById('toasts');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  while (box.children.length >= 2) box.firstChild.remove();
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+/** 复制到剪贴板：失败时弹出手动复制框 */
+function copyText(text, okMsg) {
+  const fallback = () => { ui.modal = { type: 'copy', text }; render(); };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast(okMsg || '已复制'), fallback);
+    } else fallback();
+  } catch (e) { fallback(); }
+}
+
+function confetti() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.getElementById('confetti');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width = innerWidth, H = c.height = innerHeight;
+  const colors = ['#F2672A', '#2F7FE0', '#1F9E6A', '#FFD23F', '#F2709A'];
+  const ps = Array.from({ length: 140 }, () => ({
+    x: W / 2 + (Math.random() - .5) * W * .3, y: H * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4,
+    s: 5 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  let t = 0;
+  (function frame() {
+    ctx.clearRect(0, 0, W, H);
+    ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .45; p.vx *= .99; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (++t < 110) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+  })();
+}
+
+/** 自定义确认弹窗（浏览器 confirm 在部分环境不可用） */
+function askConfirm({ title, body, ok = '确定', danger = false, onOk }) {
+  ui.modal = { type: 'confirm', title, body, ok, danger, onOk };
+  render();
+}
+function closeModal() { ui.modal = null; render(); }
+
+function ava(m, cls = '', ok = false) {
+  if (!m) return '';
+  return `<span class="ava ${cls}" title="${esc(m.nickname)}">${esc(m.avatar)}${ok ? '<span class="ok">✓</span>' : ''}</span>`;
+}
+function ring(p, label = '匹配度', color) {
+  return `<div class="ring" style="--p:${Math.max(0, Math.min(100, p))};${color ? `--c:${color}` : ''}"><span>${p}%<small>${label}</small></span></div>`;
+}
+function scoreColor(s) { return s >= 80 ? 'var(--mint)' : s >= 60 ? 'var(--sun)' : 'var(--danger)'; }
+function emptyView(art, title, body, actions = '') {
+  return `<div class="card empty"><div class="art">${art}</div><h3>${title}</h3>${body ? `<p class="muted">${body}</p>` : ''}${actions ? `<div class="row" style="justify-content:center">${actions}</div>` : ''}</div>`;
+}
+function navBtn(to, label, cls = 'btn') { return `<button class="${cls}" data-act="nav" data-to="${esc(to)}">${label}</button>`; }
+
+/* ---- pages/landing.js ---- */
+/* ============ pages/landing.js ============ */
+function pageLanding() {
+  const last = S.lastTrip && S.trips[S.lastTrip];
+  const lastCount = last ? Q.members(last.code).length : 0;
+  return `
+  <section class="hero">
+    <div>
+      <div class="eyebrow">2026 毕业季 · 拼团出发</div>
+      <h1 style="margin-top:10px">毕业不散场，<br><em>一起去旅行</em></h1>
+      <p class="sub">每人花 2 分钟填写日期、预算和想去的地方，GradTrip 帮全班分成合拍的小团，生成统一行程，旅行结束一键 AA。</p>
+      <div class="row ctas">
+        <button class="btn primary lg" data-act="nav" data-to="/create">创建旅行团</button>
+        <button class="btn lg" data-act="code.toggle">我有邀请码</button>
+        <button class="btn ghost" data-act="demo.load">⚡ 30 秒看 Demo</button>
+      </div>
+      ${ui.codeOpen ? `
+      <div class="code-box field">
+        <label for="code-in">输入 6 位邀请码</label>
+        <div class="input-row">
+          <input id="code-in" class="input ${ui.codeErr ? 'err' : ''}" maxlength="6" placeholder="如 GRAD26" value="${esc(ui.codeVal)}" data-in="code" data-enter="code.join" autocomplete="off">
+          <button class="btn primary" data-act="code.join">加入</button>
+        </div>
+        ${ui.codeErr ? `<span class="err-text">${esc(ui.codeErr)}</span>` : `<span class="hint">示例活动的邀请码是 GRAD26（先点「看 Demo」载入）</span>`}
+      </div>` : ''}
+    </div>
+    <div>${samplePass()}</div>
+  </section>
+
+  ${last ? `
+  <div class="banner sea">
+    <span style="font-size:22px">🧳</span>
+    <div class="grow"><b>继续上次的活动：${esc(last.name)}</b><div class="small muted">邀请码 <span class="mono">${last.code}</span> · ${lastCount} 位同学</div></div>
+    <button class="btn sea" data-act="nav" data-to="/t/${last.code}">进入看板</button>
+  </div>` : ''}
+
+  <section class="stack">
+    <h2>三步，从群聊接龙到出发</h2>
+    <div class="steps3">
+      <div class="step-card"><span class="n">STEP 01</span><span class="big">📝</span><h3>每人填偏好</h3><p class="muted small">可出行日期、人均预算、三个志愿目的地和旅行风格。预算只给算法看，不会公开。</p></div>
+      <div class="step-card"><span class="n">STEP 02</span><span class="big">🧩</span><h3>AI 自动组队</h3><p class="muted small">按日期、预算、目的地和风格打分分团，每个团都写明「为什么你们合拍」和需要注意的地方。</p></div>
+      <div class="step-card"><span class="n">STEP 03</span><span class="big">🗺️</span><h3>行程 + AA</h3><p class="muted small">一键生成按天的统一行程，旅途中随手记账，结束后给出最少次数的转账方案。</p></div>
+    </div>
+  </section>
+  <p class="small muted" style="text-align:center">GradTrip Demo · 数据只保存在你的浏览器里，无需登录，不涉及真实支付</p>`;
+}
+
+function samplePass() {
+  return `
+  <article class="pass" style="cursor:pointer" data-act="demo.load" title="点击载入示例">
+    <div class="pass-top mono"><span>GRADTRIP · BOARDING PASS</span><span>GT-CTU01</span></div>
+    <div class="pass-main">
+      <div class="route">
+        <div class="end"><small>FROM</small><b>校园</b><span class="mono">CAMPUS</span></div>
+        <div class="path"></div>
+        <div class="end to"><small>TO</small><b>成都</b><span class="mono">CTU</span></div>
+      </div>
+      <div class="pass-fields">
+        <div class="pf"><small>DATE</small><b>6/22–6/26</b></div>
+        <div class="pf"><small>DAYS</small><b>5 天</b></div>
+        <div class="pf"><small>PAX</small><b>6 人</b></div>
+        <div class="pf"><small>BUDGET</small><b>¥2.2–2.8k</b></div>
+      </div>
+    </div>
+    <div class="perf"></div>
+    <div class="pass-body">
+      <div class="pass-title"><h3>🐼 成都·美食漫游团</h3>${ring(88)}</div>
+      <ul class="reasons">
+        <li>6 人都能在 6/22–6/26 出行</li>
+        <li>5 人首选成都，1 人次选成都</li>
+        <li>小林和阿杰互选同行</li>
+      </ul>
+      <div class="row between"><div class="ava-stack">${['🦊', '🐯', '🐼', '🐻', '🐰', '🐱'].map(e => `<span class="ava sm">${e}</span>`).join('')}</div><span class="tag sun">点击载入示例 →</span></div>
+    </div>
+    <div class="stamp">成团 ✓</div>
+  </article>`;
+}
+
+A['code.toggle'] = () => { ui.codeOpen = !ui.codeOpen; ui.codeErr = ''; render(); if (ui.codeOpen) setTimeout(() => { const el = document.getElementById('code-in'); el && el.focus(); }, 0); };
+IN.code = el => { ui.codeVal = el.value.toUpperCase(); };
+A['code.join'] = () => {
+  const code = (ui.codeVal || '').trim().toUpperCase();
+  if (code.length !== 6) { ui.codeErr = '邀请码是 6 位字母或数字'; render(); return; }
+  if (!S.trips[code]) { ui.codeErr = '没找到这个团，检查一下邀请码？'; render(); return; }
+  ui.codeErr = ''; ui.codeOpen = false; ui.joinIntent = 'new';
+  go(`/t/${code}/join`);
+};
+A['demo.load'] = () => {
+  const code = Store.loadDemo();
+  ui.dock = false;
+  go(`/t/${code}`);
+  toast('已载入示例：软工 3 班毕业旅行（你是发起人小林）');
+};
+
+/* ---- pages/create.js ---- */
+/* ============ pages/create.js · 创建旅行团 ============ */
+const RANDOM_NAMES = ['毕业了，去成都吃到扶墙出', '最后一个暑假，海边见', '四年同窗，一起出发', '答辩完就跑路', '把青春留在路上', '不散伙旅行团'];
+
+function initCreate() {
+  ui.create = {
+    name: '', start: '2026-06-15', end: '2026-07-15', min: 3, max: 8,
+    all: DEFAULT_DESTS.slice(), dests: DEFAULT_DESTS.slice(0, 6), custom: '', deadline: '2026-06-10',
+    nickname: '', avatar: '🦊', errors: {}, dirty: false,
+  };
+}
+
+function pageCreate() {
+  if (!ui.create) initCreate();
+  const c = ui.create, e = c.errors;
+  return `
+  <div class="row between">
+    <div><div class="eyebrow">新建活动</div><h2>创建旅行团</h2></div>
+    <button class="btn ghost" data-act="create.back">← 返回</button>
+  </div>
+  <div class="grid-2">
+    <div class="card form-grid">
+      <div class="field">
+        <label for="c-name">活动名称</label>
+        <div class="input-row">
+          <input id="c-name" class="input ${e.name ? 'err' : ''}" maxlength="30" placeholder="如：2026 届软工 3 班毕业旅行" value="${esc(c.name)}" data-in="create" data-k="name">
+          <button class="icon-btn" data-act="create.random" title="随机一个名字">🎲</button>
+        </div>
+        ${e.name ? `<span class="err-text">${e.name}</span>` : ''}
+      </div>
+      <div class="two">
+        <div class="field"><label for="c-start">最早出发</label><input id="c-start" type="date" class="input ${e.date ? 'err' : ''}" value="${c.start}" data-in="create" data-k="start"></div>
+        <div class="field"><label for="c-end">最晚返回</label><input id="c-end" type="date" class="input ${e.date ? 'err' : ''}" value="${c.end}" data-in="create" data-k="end"></div>
+      </div>
+      ${e.date ? `<span class="err-text">${e.date}</span>` : ''}
+      <div class="two">
+        <div class="field"><label for="c-min">每团最少</label>
+          <select id="c-min" class="input" data-ch="create" data-k="min">${[2, 3, 4, 5].map(n => `<option value="${n}" ${n === c.min ? 'selected' : ''}>${n} 人</option>`).join('')}</select></div>
+        <div class="field"><label for="c-max">每团最多</label>
+          <select id="c-max" class="input" data-ch="create" data-k="max">${[4, 5, 6, 8, 10, 12].map(n => `<option value="${n}" ${n === c.max ? 'selected' : ''}>${n} 人</option>`).join('')}</select></div>
+      </div>
+      ${e.size ? `<span class="err-text">${e.size}</span>` : ''}
+      <div class="field">
+        <span class="label">目的地候选池 <span class="muted small">（已选 ${c.dests.length} 个，同学们从中选志愿）</span></span>
+        <div class="chips">${c.all.map(d => `<button class="chip ${c.dests.includes(d) ? 'on' : ''}" data-act="create.dest" data-d="${esc(d)}">${destEmoji(d)} ${esc(d)}</button>`).join('')}</div>
+        <div class="input-row" style="margin-top:4px">
+          <input id="c-custom" class="input" maxlength="8" placeholder="+ 自定义目的地，回车添加" value="${esc(c.custom)}" data-in="create" data-k="custom" data-enter="create.addDest">
+          <button class="btn" data-act="create.addDest">添加</button>
+        </div>
+        ${e.dests ? `<span class="err-text">${e.dests}</span>` : ''}
+      </div>
+      <div class="two">
+        <div class="field"><label for="c-deadline">填写截止（可选）</label><input id="c-deadline" type="date" class="input" value="${c.deadline}" data-in="create" data-k="deadline"></div>
+        <div class="field"><label for="c-nick">我的昵称（发起人）</label><input id="c-nick" class="input ${e.nickname ? 'err' : ''}" maxlength="10" placeholder="同学们怎么称呼你" value="${esc(c.nickname)}" data-in="create" data-k="nickname">
+          ${e.nickname ? `<span class="err-text">${e.nickname}</span>` : ''}</div>
+      </div>
+      <button class="btn primary lg block" data-act="create.submit">创建旅行团</button>
+    </div>
+    <div class="stack" style="align-content:start">
+      <span class="label muted">邀请卡片预览（实时更新）</span>
+      <div id="create-preview">${createPreview()}</div>
+    </div>
+  </div>`;
+}
+
+function createPreview() {
+  const c = ui.create;
+  const days = c.start && c.end && c.end >= c.start ? dateList(c.start, c.end).length : 0;
+  return `
+  <article class="pass">
+    <div class="pass-top mono"><span>GRADTRIP · INVITATION</span><span>CODE ••••••</span></div>
+    <div class="pass-main">
+      <h3 style="font-family:var(--f-display);font-weight:400;font-size:24px">${esc(c.name) || '<span class="muted">给旅行团起个名字</span>'}</h3>
+      <div class="pass-fields">
+        <div class="pf"><small>FROM</small><b>${c.start ? fmtMD(c.start) : '—'}</b></div>
+        <div class="pf"><small>TO</small><b>${c.end ? fmtMD(c.end) : '—'}</b></div>
+        <div class="pf"><small>WINDOW</small><b>${days} 天</b></div>
+        <div class="pf"><small>GROUP</small><b>${c.min}–${c.max} 人</b></div>
+      </div>
+    </div>
+    <div class="perf"></div>
+    <div class="pass-body">
+      <div class="chips">${c.dests.map(d => `<span class="tag sun">${destEmoji(d)} ${esc(d)}</span>`).join('') || '<span class="muted small">还没有选目的地</span>'}</div>
+      <p class="small muted">发起人：${esc(c.nickname) || '—'} ${c.deadline ? `· ${fmtMD(c.deadline)} 前填写偏好` : ''}</p>
+    </div>
+  </article>`;
+}
+function refreshPreview() { const el = document.getElementById('create-preview'); if (el) el.innerHTML = createPreview(); }
+
+IN.create = el => { ui.create[el.dataset.k] = el.value; ui.create.dirty = true; if (el.dataset.k !== 'custom') refreshPreview(); };
+CH.create = el => { ui.create[el.dataset.k] = Number(el.value); ui.create.dirty = true; refreshPreview(); };
+A['create.random'] = () => {
+  const c = ui.create; let n;
+  do { n = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]; } while (n === c.name && RANDOM_NAMES.length > 1);
+  c.name = n; c.dirty = true; delete c.errors.name; render();
+};
+A['create.dest'] = d => {
+  const c = ui.create;
+  c.dests = c.dests.includes(d.d) ? c.dests.filter(x => x !== d.d) : [...c.dests, d.d];
+  c.dirty = true; render();
+};
+A['create.addDest'] = () => {
+  const c = ui.create; const v = (c.custom || '').trim();
+  if (!v) { toast('先输入目的地名称'); return; }
+  if (c.all.includes(v)) { toast('已经有啦'); if (!c.dests.includes(v)) c.dests.push(v); c.custom = ''; render(); return; }
+  c.all.push(v); c.dests.push(v); c.custom = ''; c.dirty = true; delete c.errors.dests;
+  render(); toast(`已添加「${v}」`);
+};
+A['create.back'] = () => {
+  if (ui.create && ui.create.dirty) askConfirm({ title: '放弃创建？', body: '已填写的内容不会保存。', ok: '放弃', danger: true, onOk: () => { initCreate(); go('/'); } });
+  else go('/');
+};
+A['create.submit'] = () => {
+  const c = ui.create; const e = {};
+  if (!c.name.trim()) e.name = '给旅行团起个名字吧';
+  if (!c.start || !c.end || c.end < c.start) e.date = '返回日期要晚于出发日期';
+  else if (dateList(c.start, c.end).length < 3) e.date = '时间范围至少 3 天';
+  if (c.min > c.max) e.size = '最少人数不能大于最多人数';
+  if (c.dests.length < 2) e.dests = '至少选 2 个目的地，才有得挑';
+  if (!c.nickname.trim()) e.nickname = '填一个昵称';
+  c.errors = e;
+  if (Object.keys(e).length) {
+    render();
+    const first = document.querySelector('.input.err, .err-text');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  const code = Store.createTrip(c);
+  initCreate();
+  ui.modal = { type: 'created', code };
+  render();
+  confetti();
+};
+
+/* ---- pages/join.js ---- */
+/* ============ pages/join.js · 成员偏好填写（5 步） ============ */
+const STEP_TITLES = ['我是谁', '什么时候有空', '人均预算', '想去哪', '旅行风格'];
+
+function blankDraft() {
+  return { nickname: '', avatar: AVATARS[Math.floor(Math.random() * 12)], availableDates: [], tripDays: 5, budget: [1500, 3000],
+    destinations: [], anyDestination: false, styles: [], pace: 'normal', stay: 'budget', buddies: [], dislikes: [] };
+}
+function initJoin(code) {
+  const me = ui.joinIntent === 'new' ? null : Q.me(code);
+  const d = blankDraft();
+  if (me) {
+    d.nickname = me.nickname; d.avatar = me.avatar;
+    if (me.preference) Object.assign(d, JSON.parse(JSON.stringify(me.preference)));
+  }
+  ui.join = { code, step: 1, draft: d, memberId: me ? me.id : null, editing: !!(me && me.preference), anchor: null, rangeMode: true, done: false };
+  ui.joinIntent = null;
+}
+
+function stepError(step, d) {
+  if (step === 1 && !d.nickname.trim()) return '先填一个昵称';
+  if (step === 2 && d.availableDates.length < 3) return '至少选 3 天可出行日期';
+  if (step === 4 && !d.anyDestination && !d.destinations.length) return '至少选 1 个目的地，或打开「去哪都行」';
+  if (step === 5 && !d.styles.length) return '至少选 1 个旅行风格';
+  return '';
+}
+
+function pageJoin(code) {
+  const trip = Q.trip(code);
+  if (!trip) return emptyView('🧭', '这个团不存在', '检查一下邀请码，或者回首页载入示例。', navBtn('/', '回首页', 'btn primary'));
+  if (!ui.join || ui.join.code !== code) initJoin(code);
+  const j = ui.join, d = j.draft;
+  if (j.done) return joinDone(trip);
+  const err = stepError(j.step, d);
+  const matched = !!Q.match(code);
+  return `
+  <div class="step-wrap">
+    <div class="row between">
+      <div><div class="eyebrow">${esc(trip.name)}</div><h2>${j.editing ? '修改我的偏好' : '填写旅行偏好'}</h2></div>
+      <span class="tag mono">${j.step} / 5 · ${STEP_TITLES[j.step - 1]}</span>
+    </div>
+    <div class="stepper">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= j.step ? 'on' : ''}"></i>`).join('')}</div>
+    ${j.editing && matched ? `<div class="banner"><span>💡</span><div class="grow small">已经组过队了，修改后需要发起人点「重新匹配」才会更新分组。</div></div>` : ''}
+    <div class="card form-grid">${[step1, step2, step3, step4, step5][j.step - 1](trip, d)}</div>
+    <div class="foot-nav">
+      ${j.step > 1 ? `<button class="btn" data-act="join.prev">← 上一步</button>` : navBtn(`/t/${code}`, '去看板', 'btn ghost')}
+      <div class="row">
+        ${err ? `<span class="hint warn">${err}</span>` : ''}
+        ${j.step < 5 ? `<button class="btn primary" data-act="join.next" ${err ? 'disabled' : ''}>下一步 →</button>`
+          : `<button class="btn primary" data-act="join.submit" ${err ? 'disabled' : ''}>${j.editing ? '保存修改' : '提交偏好'} ✓</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function step1(trip, d) {
+  return `
+  <div class="field"><label for="j-nick">昵称</label>
+    <input id="j-nick" class="input" maxlength="10" placeholder="同学们怎么称呼你" value="${esc(d.nickname)}" data-in="join.nick" data-enter="join.next"></div>
+  <div class="field"><span class="label">选一个头像</span>
+    <div class="chips">${AVATARS.map(a => `<button class="chip ${d.avatar === a ? 'on' : ''}" style="font-size:20px;padding:4px 10px" data-act="join.avatar" data-a="${a}">${a}</button>`).join('')}</div></div>`;
+}
+
+function step2(trip, d) {
+  const j = ui.join;
+  const all = dateList(trip.dateRange[0], trip.dateRange[1]);
+  const sel = new Set(d.availableDates);
+  const months = {};
+  all.forEach(s => { const k = s.slice(0, 7); (months[k] = months[k] || []).push(s); });
+  const run = longestRun(d.availableDates);
+  return `
+  <div class="row between">
+    <span class="label">在日历上选出你有空的日子</span>
+    <div class="row">
+      <button class="chip ${j.rangeMode ? 'on' : ''}" data-act="join.rangeMode">${j.rangeMode ? '区间模式：点起点再点终点' : '单选模式：逐天点选'}</button>
+      <button class="btn sm ghost" data-act="join.clearDates">清空</button>
+    </div>
+  </div>
+  ${Object.entries(months).map(([k, days]) => {
+    const lead = new Date(toDayNum(days[0]) * DAY_MS).getUTCDay();
+    return `<div class="cal-month"><b class="small">${Number(k.slice(5))} 月</b>
+      <div class="cal">${'日一二三四五六'.split('').map(w => `<span class="wd">${w}</span>`).join('')}
+      ${'<span></span>'.repeat(lead)}
+      ${days.map(s => `<button class="${sel.has(s) ? 'sel' : ''} ${j.anchor === s ? 'anchor' : ''}" data-act="join.day" data-d="${s}" aria-pressed="${sel.has(s)}">${Number(s.slice(8))}</button>`).join('')}</div></div>`;
+  }).join('')}
+  <p class="small ${run.len && run.len < d.tripDays ? 'hint warn' : 'muted'}">已选 ${d.availableDates.length} 天，最长连续 ${run.len} 天${run.len && run.len < d.tripDays ? `，比期望天数短，可能不容易成团` : ''}</p>
+  <div class="field"><span class="label">期望玩几天</span>
+    <div class="seg">${[3, 5, 7].map(n => `<button class="${d.tripDays === n ? 'on' : ''}" data-act="join.days" data-n="${n}">${n} 天</button>`).join('')}</div></div>`;
+}
+
+function step3(trip, d) {
+  const L = 500, H = 6000;
+  const pct = v => (v - L) / (H - L) * 100;
+  return `
+  <div class="field"><span class="label">人均预算（不含往返大交通）</span>
+    <div class="big-num num" id="budget-label">¥${d.budget[0]} – ¥${d.budget[1]}</div>
+    <div class="dual">
+      <div class="track"></div><div class="fill" id="budget-fill" style="left:${pct(d.budget[0])}%;right:${100 - pct(d.budget[1])}%"></div>
+      <input type="range" id="bmin" min="${L}" max="${H}" step="100" value="${d.budget[0]}" data-in="join.budget" aria-label="最低预算">
+      <input type="range" id="bmax" min="${L}" max="${H}" step="100" value="${d.budget[1]}" data-in="join.budget" aria-label="最高预算">
+    </div>
+    <div class="row between small muted"><span>¥${L}</span><span>¥${H}</span></div></div>
+  <div class="lock">🔒 预算只用于匹配，其他同学看不到你的具体数字，组队结果里只显示整团的区间。</div>`;
+}
+
+function step4(trip, d) {
+  return `
+  <div class="row between"><span class="label">按想去的顺序点选，最多 3 个</span>
+    <button class="chip ${d.anyDestination ? 'on' : ''}" data-act="join.any">🎲 去哪都行</button></div>
+  <div class="chips">${trip.destinations.map(x => {
+    const i = d.destinations.indexOf(x);
+    const full = d.destinations.length >= 3 && i < 0;
+    return `<button class="chip ${i >= 0 ? 'on' : ''} ${d.anyDestination || full ? 'off' : ''}" data-act="join.dest" data-d="${esc(x)}">${i >= 0 ? `<span class="rank">${i + 1}</span>` : destEmoji(x)} ${esc(x)}</button>`;
+  }).join('')}</div>
+  <p class="small muted">${d.anyDestination ? '已开启「去哪都行」，系统会把你放进最合拍的团。' : d.destinations.length ? `你的志愿：${d.destinations.map((x, i) => `${'①②③'[i]} ${x}`).join('　')}` : '第一个点的就是第一志愿。'}</p>`;
+}
+
+function step5(trip, d) {
+  const others = Q.members(trip.code).filter(m => m.id !== ui.join.memberId);
+  return `
+  <div class="field"><span class="label">旅行风格 <span class="muted small">（最多 5 个）</span></span>
+    <div class="chips">${STYLE_TAGS.map(t => `<button class="chip ${d.styles.includes(t) ? 'on' : ''}" data-act="join.style" data-t="${t}">${t}</button>`).join('')}</div></div>
+  <div class="field"><span class="label">旅行节奏</span>
+    <div class="pace-cards">${Object.keys(PACE_LABEL).map(p => `<button class="pace-card ${d.pace === p ? 'on' : ''}" data-act="join.pace" data-p="${p}"><span class="e">${PACE_EMOJI[p]}</span><b>${PACE_LABEL[p]}</b><span class="small muted">${PACE_DESC[p]}</span></button>`).join('')}</div></div>
+  <div class="field"><span class="label">住宿偏好</span>
+    <div class="chips">${Object.keys(STAY_LABEL).map(s => `<button class="chip ${d.stay === s ? 'on' : ''}" data-act="join.stay" data-s="${s}">${STAY_LABEL[s]}</button>`).join('')}</div></div>
+  <div class="field"><span class="label">想和谁一起 <span class="muted small">（可选，最多 3 位）</span></span>
+    ${others.length ? `<div class="chips">${others.map(m => `<button class="chip ${d.buddies.includes(m.id) ? 'on' : ''}" data-act="join.buddy" data-id="${m.id}">${esc(m.avatar)} ${esc(m.nickname)}</button>`).join('')}</div>`
+      : '<p class="small muted">还没有其他同学加入，之后可以回来修改。</p>'}</div>
+  <div class="field"><span class="label">不想要的安排 <span class="muted small">（可选）</span></span>
+    <div class="chips">${DISLIKES.map(t => `<button class="chip ${d.dislikes.includes(t) ? 'on' : ''}" data-act="join.dislike" data-t="${t}">🙅 ${t}</button>`).join('')}</div></div>`;
+}
+
+function joinDone(trip) {
+  const m = S.members[ui.join.memberId];
+  const p = m.preference;
+  const top = p.styles[0] || '旅行';
+  const titles = { 美食: '🍜 美食党', 自然风光: '🌿 自然派', 城市漫步: '🚶 城市漫游家', 拍照打卡: '📸 出片达人', 历史人文: '🏛️ 人文控', 海边度假: '🌊 海边人', 刺激项目: '🎢 冒险家' };
+  return `
+  <div class="step-wrap">
+    <div class="persona">
+      ${ava(m, 'lg')}
+      <div class="eyebrow">我的旅行画像</div>
+      <h2>${esc(m.nickname)} · ${titles[top] || top}</h2>
+      <div class="chips" style="justify-content:center">
+        <span class="tag sun">${PACE_EMOJI[p.pace]} ${PACE_LABEL[p.pace]}节奏</span>
+        <span class="tag sea">${p.anyDestination ? '去哪都行' : '想去 ' + p.destinations.join(' / ')}</span>
+        <span class="tag mint">期望 ${p.tripDays} 天</span>
+        ${p.styles.map(s => `<span class="tag">${s}</span>`).join('')}
+      </div>
+      <p class="small muted">已有 ${Q.filled(trip.code).length} 位同学完成填写。预算不会出现在画像里。</p>
+      <div class="row" style="justify-content:center">
+        <button class="btn primary" data-act="nav" data-to="/t/${trip.code}">去看板看看谁也在 →</button>
+        <button class="btn" data-act="join.edit">修改偏好</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 交互 ---------- */
+const J = () => ui.join, D = () => ui.join.draft;
+IN['join.nick'] = el => { D().nickname = el.value; updateStepNav(); };
+function updateStepNav() {
+  // 只更新底部按钮状态，避免输入时整页重绘丢失焦点
+  const err = stepError(J().step, D());
+  const btn = document.querySelector('[data-act="join.next"],[data-act="join.submit"]');
+  if (btn) btn.disabled = !!err;
+  const hint = document.querySelector('.foot-nav .hint');
+  if (hint) hint.textContent = err; else if (err && btn) btn.insertAdjacentHTML('beforebegin', `<span class="hint warn">${err}</span>`);
+}
+A['join.avatar'] = x => { D().avatar = x.a; render(); };
+A['join.prev'] = () => { J().step--; render(); scrollTo(0, 0); };
+A['join.next'] = () => {
+  const j = J(), d = D();
+  if (stepError(j.step, d)) return;
+  if (j.step === 1) {
+    const dup = Q.members(j.code).find(m => m.nickname === d.nickname.trim() && m.id !== j.memberId);
+    if (dup) { ui.modal = { type: 'dupName', member: dup.id }; render(); return; }
+  }
+  j.step++; render(); scrollTo(0, 0);
+};
+A['join.rangeMode'] = () => { J().rangeMode = !J().rangeMode; J().anchor = null; render(); };
+A['join.clearDates'] = () => { D().availableDates = []; J().anchor = null; render(); };
+A['join.day'] = x => {
+  const j = J(), d = D(), s = x.d;
+  const set = new Set(d.availableDates);
+  if (!j.rangeMode) { set.has(s) ? set.delete(s) : set.add(s); }
+  else if (!j.anchor) {
+    if (set.has(s)) set.delete(s); else { set.add(s); j.anchor = s; }
+  } else {
+    const [a, b] = j.anchor < s ? [j.anchor, s] : [s, j.anchor];
+    dateList(a, b).forEach(t => set.add(t));
+    j.anchor = null;
+  }
+  d.availableDates = [...set].sort();
+  render();
+};
+A['join.days'] = x => { D().tripDays = Number(x.n); render(); };
+IN['join.budget'] = el => {
+  const d = D();
+  const lo = Number(document.getElementById('bmin').value), hi = Number(document.getElementById('bmax').value);
+  if (el.id === 'bmin') d.budget = [Math.min(lo, hi - 100), hi]; else d.budget = [lo, Math.max(hi, lo + 100)];
+  document.getElementById('bmin').value = d.budget[0]; document.getElementById('bmax').value = d.budget[1];
+  document.getElementById('budget-label').textContent = `¥${d.budget[0]} – ¥${d.budget[1]}`;
+  const pct = v => (v - 500) / 5500 * 100;
+  const f = document.getElementById('budget-fill'); f.style.left = pct(d.budget[0]) + '%'; f.style.right = (100 - pct(d.budget[1])) + '%';
+};
+A['join.any'] = () => { const d = D(); d.anyDestination = !d.anyDestination; if (d.anyDestination) d.destinations = []; render(); };
+A['join.dest'] = x => {
+  const d = D(); if (d.anyDestination) { toast('先关闭「去哪都行」'); return; }
+  const i = d.destinations.indexOf(x.d);
+  if (i >= 0) d.destinations.splice(i, 1);
+  else if (d.destinations.length >= 3) { toast('最多 3 个哦，先取消一个'); return; }
+  else d.destinations.push(x.d);
+  render();
+};
+A['join.style'] = x => {
+  const d = D(); const i = d.styles.indexOf(x.t);
+  if (i >= 0) d.styles.splice(i, 1); else if (d.styles.length >= 5) { toast('最多选 5 个'); return; } else d.styles.push(x.t);
+  render();
+};
+A['join.pace'] = x => { D().pace = x.p; render(); };
+A['join.stay'] = x => { D().stay = x.s; render(); };
+A['join.buddy'] = x => {
+  const d = D(); const i = d.buddies.indexOf(x.id);
+  if (i >= 0) d.buddies.splice(i, 1); else if (d.buddies.length >= 3) { toast('最多选 3 位'); return; } else d.buddies.push(x.id);
+  render();
+};
+A['join.dislike'] = x => { const d = D(); const i = d.dislikes.indexOf(x.t); i >= 0 ? d.dislikes.splice(i, 1) : d.dislikes.push(x.t); render(); };
+A['join.submit'] = () => {
+  const j = J();
+  if (stepError(5, j.draft)) return;
+  const wasMatched = !!Q.match(j.code);
+  j.memberId = Store.savePreference(j.code, j.memberId, j.draft);
+  j.done = true;
+  render(); scrollTo(0, 0); confetti();
+  toast(wasMatched ? '已保存，记得让发起人重新匹配' : (j.editing ? '偏好已更新' : '提交成功，欢迎上车！'));
+};
+A['join.edit'] = () => { ui.joinIntent = null; initJoin(J().code); render(); };
+A['dup.me'] = () => {
+  const m = S.members[ui.modal.member];
+  Store.setCurrent(m.tripCode, m.id);
+  ui.modal = null;
+  initJoin(m.tripCode);
+  ui.join.step = 2;
+  render();
+  toast(`欢迎回来，${m.nickname}，已载入你之前的偏好`);
+};
+A['dup.rename'] = () => { ui.modal = null; render(); setTimeout(() => { const el = document.getElementById('j-nick'); el && el.select(); }, 0); };
+
+/* ---- pages/dashboard.js ---- */
+/* ============ pages/dashboard.js · 团队看板 ============ */
+const MIN_TO_MATCH = 6;
+
+function pageDash(code) {
+  const trip = Q.trip(code);
+  if (!trip) return emptyView('🧭', '这个团不存在', '可能已被重置，回首页重新创建或载入示例。', navBtn('/', '回首页', 'btn primary'));
+  const members = Q.members(code), filled = members.filter(m => m.preference);
+  const me = Q.me(code), match = Q.match(code);
+  const pct = members.length ? Math.round(filled.length / members.length * 100) : 0;
+  const lack = Math.max(0, MIN_TO_MATCH - filled.length);
+  const unfilled = members.filter(m => !m.preference);
+
+  return `
+  <section class="card">
+    <div class="row between" style="align-items:flex-start">
+      <div class="stack" style="gap:6px">
+        <div class="eyebrow">${fmtMD(trip.dateRange[0])} – ${fmtMD(trip.dateRange[1])} · 每团 ${trip.groupSize[0]}–${trip.groupSize[1]} 人</div>
+        <h2>${esc(trip.name)}</h2>
+        <div class="row small muted">邀请码 <span class="mono tag sun" style="font-size:14px">${trip.code}</span>
+          ${trip.deadline ? `<span>· ${fmtMD(trip.deadline)} 截止填写</span>` : ''}
+          ${match ? `<span class="tag mint">✅ 已组成 ${match.groups.length} 个团</span>` : `<span class="tag">收集偏好中</span>`}</div>
+      </div>
+      <div class="row">
+        <button class="btn" data-act="dash.copyCode">复制邀请码</button>
+        <button class="btn" data-act="dash.share">分享邀请</button>
+      </div>
+    </div>
+  </section>
+
+  ${me && !me.preference ? `<div class="banner"><span style="font-size:22px">✍️</span><div class="grow"><b>你还没填写偏好</b><div class="small muted">填完才能参与组队，大概 2 分钟。</div></div><button class="btn primary" data-act="dash.fillMine">去填写</button></div>` : ''}
+  ${match ? `<div class="banner mint"><span style="font-size:22px">🧩</span><div class="grow"><b>已组成 ${match.groups.length} 个团${Q.unmatched(code).length ? `，${Q.unmatched(code).length} 人待调剂` : ''}</b>${match.stale ? '<div class="small">有同学更新了偏好或新加入，可以重新匹配。</div>' : ''}</div>
+    <button class="btn primary" data-act="nav" data-to="/t/${code}/match">查看组队结果</button><button class="btn" data-act="match.rerun">重新匹配</button></div>` : ''}
+
+  ${members.length <= 1 ? emptyView('🚌', '大巴车空空的，等同学上车', '把邀请码发到班群，大家填完偏好后就能一键组队。没有同学时，可以先模拟几位体验一下。',
+    `<button class="btn primary" data-act="dash.share">复制邀请文案</button><button class="btn" data-act="dash.mock">+ 模拟一位同学加入</button>`) : ''}
+
+  <div class="grid-2">
+    <div class="stack" style="gap:20px;align-content:start">
+      <section class="card">
+        <div class="row" style="gap:20px">
+          <div class="progress-ring" style="--p:${pct}"><div><b>${filled.length}/${members.length}</b><span class="small muted">人已上车</span></div></div>
+          <div class="stack" style="flex:1;min-width:200px;gap:10px">
+            <h3>${lack ? `还差 ${lack} 人就能组队 🚌` : '人齐了，可以组队啦！'}</h3>
+            <p class="small muted">${unfilled.length ? `未填写：${unfilled.map(m => esc(m.nickname)).join('、')}` : '所有加入的同学都填完了。'}</p>
+            <div class="row">
+              <button class="btn primary lg ${lack ? '' : 'pulse'}" data-act="match.start" ${lack ? 'disabled' : ''}>✨ ${match ? '重新 AI 组队' : '开始 AI 组队'}</button>
+              <button class="btn sm" data-act="dash.nudge">催一下未填的同学</button>
+            </div>
+            ${lack ? `<span class="hint">至少 ${MIN_TO_MATCH} 人填写后才能组队，现在 ${filled.length} 人。</span>` : ''}
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-title"><h3>成员墙 · ${members.length} 人</h3><button class="btn sm" data-act="dash.mock">+ 模拟一位同学加入</button></div>
+        <div class="member-grid">${members.map(m => memberCard(m, trip, me)).join('')}</div>
+      </section>
+    </div>
+    <div class="stack" style="gap:20px;align-content:start">${insights(trip, filled)}</div>
+  </div>`;
+}
+
+function memberCard(m, trip, me) {
+  const isMe = me && me.id === m.id;
+  const st = m.preference ? `<span class="st" style="color:var(--mint)">● 已填写</span>` : `<span class="st muted">○ 未填写</span>`;
+  return `<button class="mcard ${isMe ? 'me' : ''} ${m.preference ? '' : 'pending'}" data-act="drawer.open" data-id="${m.id}">
+    ${ava(m)}<div style="min-width:0"><div class="nm">${esc(m.nickname)}${isMe ? ' <span class="tag sea">我</span>' : ''}${trip.creatorId === m.id ? ' 👑' : ''}</div>${st}</div></button>`;
+}
+
+function insights(trip, filled) {
+  if (filled.length < 3) {
+    return `<section class="card empty"><div class="art">📊</div><h3>偏好洞察</h3><p class="muted small">3 人填写后解锁：热门目的地、日期热力图和预算分布。现在 ${filled.length} 人。</p></section>`;
+  }
+  // 目的地热度
+  const dest = trip.destinations.map(d => ({
+    d, want: filled.filter(m => m.preference.anyDestination || m.preference.destinations.includes(d)).length,
+    first: filled.filter(m => m.preference.destinations[0] === d).length,
+  })).sort((a, b) => b.want - a.want || b.first - a.first);
+  const maxW = Math.max(1, ...dest.map(x => x.want));
+  // 日期热力
+  const days = dateList(trip.dateRange[0], trip.dateRange[1]);
+  const cnt = Object.fromEntries(days.map(s => [s, 0]));
+  filled.forEach(m => m.preference.availableDates.forEach(s => { if (s in cnt) cnt[s]++; }));
+  const maxC = Math.max(1, ...Object.values(cnt));
+  const peak = days.reduce((b, s) => cnt[s] > cnt[b] ? s : b, days[0]);
+  const lead = new Date(toDayNum(days[0]) * DAY_MS).getUTCDay();
+  // 预算分布（按区间中点）
+  const buckets = [['< ¥1.5k', 0, 1500], ['¥1.5–2.5k', 1500, 2500], ['¥2.5–3.5k', 2500, 3500], ['> ¥3.5k', 3500, 1e9]];
+  const bc = buckets.map(([l, a, b]) => ({ l, n: filled.filter(m => { const mid = (m.preference.budget[0] + m.preference.budget[1]) / 2; return mid >= a && mid < b; }).length }));
+  const maxB = Math.max(1, ...bc.map(x => x.n));
+  return `
+  <section class="card">
+    <div class="card-title"><h3>🔥 目的地热度</h3><span class="small muted">想去人数（含第一志愿）</span></div>
+    <div class="bars">${dest.slice(0, 6).map(x => `<div class="bar-row"><span>${destEmoji(x.d)} ${esc(x.d)}</span><div class="bar"><i style="width:${x.want / maxW * 100}%"></i></div><span class="num small">${x.want} 人</span></div>`).join('')}</div>
+  </section>
+  <section class="card">
+    <div class="card-title"><h3>📅 日期热力图</h3><span class="small muted">${fmtMD(peak)} 可出行的人最多（${cnt[peak]} 人）</span></div>
+    <div class="heat">${'日一二三四五六'.split('').map(w => `<span class="wd">${w}</span>`).join('')}${'<span></span>'.repeat(lead)}
+      ${days.map(s => { const r = cnt[s] / maxC; return `<span class="d" title="${fmtMD(s)}：${cnt[s]} 人有空" style="background:color-mix(in srgb, var(--sun) ${Math.round(r * 85)}%, var(--surface-2));color:${r > .55 ? 'var(--sun-ink)' : 'var(--muted)'}">${Number(s.slice(8))}</span>`; }).join('')}</div>
+    <div class="legend" style="margin-top:10px"><i style="background:var(--surface-2)"></i>少 <i style="background:color-mix(in srgb, var(--sun) 45%, var(--surface-2))"></i> <i style="background:var(--sun)"></i>多</div>
+  </section>
+  <section class="card">
+    <div class="card-title"><h3>💰 预算分布</h3><span class="small muted">只统计人数，不显示个人</span></div>
+    <div class="bars">${bc.map(x => `<div class="bar-row"><span class="num">${x.l}</span><div class="bar sea"><i style="width:${x.n / maxB * 100}%"></i></div><span class="num small">${x.n} 人</span></div>`).join('')}</div>
+  </section>`;
+}
+
+/* ---------- 抽屉：成员公开画像 ---------- */
+function drawerMember(id) {
+  const m = S.members[id]; if (!m) return '';
+  const code = m.tripCode, me = Q.me(code), p = m.preference;
+  const isMe = me && me.id === m.id;
+  const g = Q.groupOf(code, m.id);
+  return `
+  <div class="row between"><div class="row">${ava(m, 'lg')}<div><h3>${esc(m.nickname)}${isMe ? ' <span class="tag sea">我</span>' : ''}</h3>
+    <span class="small muted">${S.trips[code].creatorId === m.id ? '👑 发起人 · ' : ''}${p ? '已填写偏好' : '还没填写偏好'}</span></div></div>
+    <button class="icon-btn" data-act="modal.close" aria-label="关闭">✕</button></div>
+  ${g ? `<div class="banner mint small"><span>🧩</span><div class="grow">已分到 <b>${esc(g.name)}</b></div><button class="btn sm" data-act="nav" data-to="/t/${code}/g/${g.id}">去看看</button></div>` : ''}
+  ${p ? `
+    <div class="field"><span class="label">想去</span><div class="chips">${p.anyDestination ? '<span class="tag sun">🎲 去哪都行</span>' : p.destinations.map((d, i) => `<span class="tag sun">${'①②③'[i]} ${esc(d)}</span>`).join('')}</div></div>
+    <div class="field"><span class="label">旅行风格</span><div class="chips">${p.styles.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>
+    <div class="field"><span class="label">节奏 & 住宿</span><div class="chips"><span class="tag lemon">${PACE_EMOJI[p.pace]} ${PACE_LABEL[p.pace]}</span><span class="tag">${STAY_LABEL[p.stay]}</span><span class="tag mint">期望 ${p.tripDays} 天</span></div></div>
+    <div class="field"><span class="label">有空的日子</span><span class="small muted">${p.availableDates.length} 天，最长连续 ${longestRun(p.availableDates).len} 天（${fmtMD(p.availableDates[0])} 起）</span></div>
+    <div class="lock">🔒 预算仅用于匹配，不对其他同学公开</div>
+    ${isMe ? `<button class="btn primary" data-act="dash.fillMine">编辑我的偏好</button>` : `<button class="btn" data-act="drawer.become" data-id="${m.id}">切换为 TA 的身份查看</button>`}`
+  : `<p class="muted">TA 还没填写偏好，提醒一下吧。</p>
+    ${isMe ? `<button class="btn primary" data-act="dash.fillMine">去填写我的偏好</button>` : `<button class="btn primary" data-act="drawer.nudgeOne" data-id="${m.id}">复制提醒文案</button>
+    <button class="btn" data-act="drawer.become" data-id="${m.id}">切换为 TA 去填写</button>`}`}`;
+}
+
+/* ---------- 交互 ---------- */
+function inviteText(trip) {
+  return `🎓【${trip.name}】毕业旅行拼团开始啦！\n打开 GradTrip，输入邀请码 ${trip.code}，花 2 分钟填一下有空的日期、预算和想去的地方，系统会自动帮大家分成合拍的小团～${trip.deadline ? `\n⏰ ${fmtMD(trip.deadline)} 前填完哦` : ''}`;
+}
+A['dash.copyCode'] = () => copyText(route.code, `邀请码 ${route.code} 已复制`);
+A['dash.share'] = () => copyText(inviteText(Q.trip(route.code)), '邀请文案已复制，去班群粘贴吧');
+A['dash.nudge'] = () => {
+  const un = Q.members(route.code).filter(m => !m.preference);
+  if (!un.length) { toast('大家都填完啦 🎉'); return; }
+  copyText(`${un.map(m => '@' + m.nickname).join(' ')} 还差你们就能组队啦！邀请码 ${route.code}，2 分钟填完偏好～`, `已复制催填文案（${un.length} 人）`);
+};
+A['dash.mock'] = () => {
+  const m = Store.addMockMember(route.code);
+  render();
+  toast(`${m.avatar} ${m.nickname} 加入并填好了偏好`);
+};
+A['dash.fillMine'] = () => { ui.joinIntent = null; ui.join = null; go(`/t/${route.code}/join`); };
+A['drawer.open'] = x => { ui.modal = { type: 'drawer', id: x.id }; render(); };
+A['drawer.become'] = x => {
+  const m = S.members[x.id];
+  Store.setCurrent(m.tripCode, m.id);
+  ui.modal = null;
+  toast(`已切换为 ${m.nickname}`);
+  if (!m.preference) { ui.join = null; go(`/t/${m.tripCode}/join`); } else render();
+};
+A['drawer.nudgeOne'] = x => { const m = S.members[x.id]; copyText(`@${m.nickname} 毕业旅行组队就差你啦！邀请码 ${m.tripCode}`, '已复制提醒文案'); };
+
+/* ---- pages/match.js ---- */
+/* ============ pages/match.js · AI 智能组队结果 ============ */
+const LOAD_STEPS = ['对齐大家的可出行日期', '比较预算区间', '寻找口味相投的搭子', '生成推荐理由'];
+const PASS_TONES = ['', 'sea', 'mint'];
+
+function pageMatch(code) {
+  const trip = Q.trip(code);
+  if (!trip) return emptyView('🧭', '这个团不存在', '', navBtn('/', '回首页', 'btn primary'));
+  if (ui.matchAnim) {
+    return `<section class="card loading"><div class="plane-anim">✈️</div><h2>AI 正在为 ${Q.filled(code).length} 位同学组队…</h2>
+      <ul class="load-steps">${LOAD_STEPS.map((s, i) => `<li class="${i < ui.matchAnim.step ? 'done' : i === ui.matchAnim.step ? 'now' : ''}">${i < ui.matchAnim.step ? '✓' : i === ui.matchAnim.step ? '…' : '○'} ${s}</li>`).join('')}</ul></section>`;
+  }
+  const match = Q.match(code);
+  if (!match) {
+    const n = Q.filled(code).length;
+    return emptyView('🧩', '还没开始组队', n >= MIN_TO_MATCH ? `已有 ${n} 人填写，可以开始了。` : `至少 ${MIN_TO_MATCH} 人填写后才能组队，现在 ${n} 人。`,
+      `${navBtn(`/t/${code}`, '回看板', 'btn')}${n >= MIN_TO_MATCH ? '<button class="btn primary" data-act="match.start">✨ 开始 AI 组队</button>' : ''}`);
+  }
+  const byId = Q.byId(code), me = Q.me(code);
+  const un = Q.unmatched(code);
+  const groups = match.groups;
+  const total = groups.reduce((s, g) => s + g.memberIds.length, 0) + un.length;
+  const avg = groups.length ? Math.round(groups.reduce((s, g) => s + g.score, 0) / groups.length) : 0;
+  const myGroup = me && Q.groupOf(code, me.id);
+  const myUn = me && un.find(u => u.member.id === me.id);
+
+  let mine = '';
+  if (me && !me.preference) mine = `<div class="banner"><span style="font-size:22px">✍️</span><div class="grow"><b>你（${esc(me.nickname)}）还没填写偏好</b>，暂时没有参与组队。</div><button class="btn primary" data-act="dash.fillMine">去填写</button></div>`;
+  else if (myGroup) {
+    const confirmed = myGroup.confirmedIds.includes(me.id);
+    mine = `<div class="banner sea"><span style="font-size:26px">${destEmoji(myGroup.destination)}</span><div class="grow"><div class="small muted">${esc(me.nickname)}，你被分到了</div><b style="font-size:17px">${esc(myGroup.name)}</b> <span class="tag mint">匹配度 ${myGroup.score}%</span></div>
+      ${confirmed ? `<button class="btn sea" data-act="nav" data-to="/t/${code}/g/${myGroup.id}">已确认 ✓ 进入小团</button><button class="btn sm ghost" data-act="g.confirm" data-g="${myGroup.id}">撤回确认</button>`
+        : `<button class="btn primary" data-act="g.confirm" data-g="${myGroup.id}">确认加入</button>`}
+      <button class="btn" data-act="move.open" data-m="${me.id}" data-self="1">申请换团</button></div>`;
+  } else if (myUn) mine = `<div class="banner"><span style="font-size:22px">🧭</span><div class="grow"><b>${esc(me.nickname)}，你暂时在待调剂区</b><div class="small muted">${esc(myUn.reason)}</div></div><button class="btn primary" data-act="move.open" data-m="${me.id}" data-self="1">选择一个团加入</button></div>`;
+
+  return `
+  <div class="row between">
+    <div><div class="eyebrow">AI 组队结果 · ${esc(trip.name)}</div><h2>${total} 人 → ${groups.length} 个团</h2></div>
+    <div class="row">${navBtn(`/t/${code}`, '← 返回看板', 'btn ghost')}<button class="btn" data-act="match.rerun">重新匹配</button></div>
+  </div>
+  <div class="row">
+    <span class="tag sun">平均匹配度 ${avg}%</span>
+    <span class="tag mint">已确认 ${groups.reduce((s, g) => s + g.confirmedIds.length, 0)} 人</span>
+    ${un.length ? `<span class="tag danger">${un.length} 人待调剂</span>` : '<span class="tag mint">全员已分团</span>'}
+    <span class="small muted">点击成员头像可以把 TA 移到其他团，匹配度会实时重算</span>
+  </div>
+  ${match.stale ? `<div class="banner"><span>🔄</span><div class="grow small">有同学更新了偏好或新加入，重新匹配可以得到最新结果。</div><button class="btn sm primary" data-act="match.rerun">重新匹配</button></div>` : ''}
+  ${mine}
+  ${groups.length ? `<div class="pass-grid">${groups.map((g, i) => passCard(g, i, byId, me, code)).join('')}</div>`
+    : emptyView('😵', '大家的时间太分散了', bestWindowHint(trip), navBtn(`/t/${code}`, '回看板', 'btn primary'))}
+  ${un.length ? `
+  <section class="card">
+    <div class="card-title"><h3>🧭 待调剂 · ${un.length} 人</h3><span class="small muted">没有自动分团的原因和推荐去处</span></div>
+    <div class="stack">${un.map(u => {
+      const sg = u.suggest && groups.find(g => g.id === u.suggest.groupId);
+      return `<div class="option" style="cursor:default">${ava(u.member)}<div class="grow"><b>${esc(u.member.nickname)}</b><div class="small muted">${esc(u.reason)}</div>
+        ${sg ? `<div class="small">推荐：${esc(sg.name)} · 加入后预计匹配度 <b>${u.suggest.score}%</b>${u.suggest.hardOk ? '' : ' <span class="tag danger">有冲突</span>'}</div>` : ''}</div>
+        <div class="row">${sg ? `<button class="btn sm ${u.suggest.hardOk ? 'primary' : ''}" data-act="move.to" data-m="${u.member.id}" data-g="${sg.id}">${u.suggest.hardOk ? '加入推荐团' : '仍然加入'}</button>` : ''}<button class="btn sm" data-act="move.open" data-m="${u.member.id}">移动到…</button></div></div>`;
+    }).join('')}</div>
+  </section>` : ''}`;
+}
+
+function bestWindowHint(trip) {
+  const filled = Q.filled(trip.code);
+  const cnt = {};
+  filled.forEach(m => m.preference.availableDates.forEach(s => { cnt[s] = (cnt[s] || 0) + 1; }));
+  const best = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  return best ? `建议：${fmtMD(best[0])} 前后可出行的人最多（${best[1]} 人），可以请大家调整一下日期。` : '';
+}
+
+function passCard(g, i, byId, me, code) {
+  const all = g.memberIds.length && g.confirmedIds.length === g.memberIds.length;
+  const open = ui.openDetail[g.id];
+  const bd = g.breakdown;
+  const dims = [['目的地', bd.destination, 35], ['日期', bd.date, 20], ['预算', bd.budget, 20], ['风格', bd.style, 15], ['节奏住宿', bd.pace, 10]];
+  return `
+  <article class="pass ${PASS_TONES[i % 3]}">
+    <div class="pass-top mono"><span>GRADTRIP · BOARDING PASS</span><span>GT-${destCode(g.destination)}0${i + 1}</span></div>
+    <div class="pass-main">
+      <div class="route">
+        <div class="end"><small>FROM</small><b>校园</b><span class="mono">CAMPUS</span></div>
+        <div class="path"></div>
+        <div class="end to"><small>TO</small><b>${esc(g.destination)}</b><span class="mono">${destCode(g.destination)}</span></div>
+      </div>
+      <div class="pass-fields">
+        <div class="pf"><small>DATE</small><b>${g.dateWindow ? `${fmtMD(g.dateWindow[0])}–${fmtMD(g.dateWindow[1])}` : '待协商'}</b></div>
+        <div class="pf"><small>DAYS</small><b>${g.days || '—'} 天</b></div>
+        <div class="pf"><small>PAX</small><b>${g.memberIds.length} 人</b></div>
+        <div class="pf"><small>BUDGET</small><b>${g.budgetOk ? `¥${g.budgetRange[0]}–${g.budgetRange[1]}` : '待商量'}</b></div>
+      </div>
+    </div>
+    <div class="perf"></div>
+    <div class="pass-body">
+      <div class="pass-title"><div><h3>${destEmoji(g.destination)} ${esc(g.name)}</h3><span class="small muted">已确认 ${g.confirmedIds.length}/${g.memberIds.length}</span></div>${ring(g.score, '匹配度', scoreColor(g.score))}</div>
+      <div class="chips">${g.memberIds.map(id => {
+        const m = byId[id]; if (!m) return '';
+        return `<button class="mchip ${me && me.id === id ? 'me' : ''}" data-act="move.open" data-m="${id}" title="移动 ${esc(m.nickname)}">${ava(m, 'sm', g.confirmedIds.includes(id))}${esc(m.nickname)}${g.leaderId === id ? ' 👑' : ''}</button>`;
+      }).join('')}</div>
+      ${g.reasons.length ? `<div><div class="small muted" style="margin-bottom:4px">为什么推荐你们一起</div><ul class="reasons">${g.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+      ${g.warnings.length ? `<ul class="reasons warn">${g.warnings.map(r => `<li>${esc(r.replace(/^⚠\s*/, ''))}</li>`).join('')}</ul>` : ''}
+      ${open ? `<div class="card tint stack" style="padding:14px"><span class="small muted">团内两两得分的平均值</span><div class="bars">${dims.map(([l, v, mx]) => `<div class="bar-row"><span>${l}</span><div class="bar mint"><i style="width:${v / mx * 100}%"></i></div><span class="num small">${v.toFixed(1)}/${mx}</span></div>`).join('')}
+        ${bd.bonus ? `<div class="bar-row"><span>互选加分</span><div class="bar"><i style="width:${bd.bonus * 10}%"></i></div><span class="num small">+${bd.bonus.toFixed(1)}</span></div>` : ''}</div></div>` : ''}
+      <div class="row between">
+        <button class="btn sm ghost" data-act="g.detail" data-g="${g.id}">${open ? '收起详情 ▲' : '查看匹配详情 ▼'}</button>
+        <button class="btn sm primary" data-act="nav" data-to="/t/${code}/g/${g.id}">进入小团 →</button>
+      </div>
+    </div>
+    ${all ? '<div class="stamp">成团 ✓</div>' : ''}
+  </article>`;
+}
+
+/* ---------- 换团 / 移动弹窗 ---------- */
+function modalMove(mid, self) {
+  const m = S.members[mid], code = m.tripCode, trip = Q.trip(code), byId = Q.byId(code);
+  const match = Q.match(code);
+  const cur = Q.groupOf(code, mid);
+  const opts = match.groups.filter(g => g !== cur).map(g => ({ g, p: predictScore(m, g, byId, trip), full: g.memberIds.length >= trip.groupSize[1] }))
+    .sort((a, b) => b.p.score - a.p.score);
+  return `
+  <div class="modal-head"><div><h3>${self ? '申请换团' : `把 ${esc(m.nickname)} 移到…`}</h3><p class="small muted">${cur ? `当前：${esc(cur.name)}` : '当前：待调剂'} · 预计匹配度 = TA 和团内每个人的平均分</p></div><button class="icon-btn" data-act="modal.close">✕</button></div>
+  <div class="stack">${opts.map(({ g, p, full }) => `
+    <button class="option" data-act="move.to" data-m="${mid}" data-g="${g.id}" ${full ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
+      <span style="font-size:26px">${destEmoji(g.destination)}</span>
+      <div class="grow"><b>${esc(g.name)}</b><div class="small muted">${g.memberIds.length} 人 · ${g.dateWindow ? `${fmtMD(g.dateWindow[0])}–${fmtMD(g.dateWindow[1])}` : '日期待定'}</div>
+        ${full ? '<span class="tag">已满员</span>' : p.hardOk ? '<span class="tag mint">日期预算都合适</span>' : `<span class="tag danger">${p.hardFail === 'date' ? '日期' : '预算'}不完全匹配</span>`}</div>
+      ${ring(p.score, '预计', scoreColor(p.score))}
+    </button>`).join('') || '<p class="muted">没有其他团可选。</p>'}
+    ${cur && !self ? `<button class="btn ghost" data-act="move.to" data-m="${mid}" data-g="">移到待调剂区</button>` : ''}
+  </div>
+  ${!self ? `<p class="small muted">发起人调整分组的功能，Demo 中对所有身份开放。</p>` : ''}`;
+}
+
+/* ---------- 交互 ---------- */
+function runMatchAnimated(code) {
+  ui.matchAnim = { step: 0 };
+  go(`/t/${code}/match`);
+  const tick = () => {
+    if (!ui.matchAnim) return;
+    ui.matchAnim.step++;
+    if (ui.matchAnim.step >= LOAD_STEPS.length) {
+      Store.runMatch(code);
+      ui.matchAnim = null;
+      ui.openDetail = {};
+      render();
+      const m = Q.match(code);
+      toast(`组队完成：${m.groups.length} 个团，${Q.unmatched(code).length} 人待调剂`);
+    } else { render(); setTimeout(tick, 550); }
+  };
+  render();
+  setTimeout(tick, 550);
+}
+A['match.start'] = () => {
+  const code = route.code;
+  if (Q.filled(code).length < MIN_TO_MATCH) { toast(`至少 ${MIN_TO_MATCH} 人填写后才能组队`); return; }
+  if (Q.match(code)) A['match.rerun']();
+  else runMatchAnimated(code);
+};
+A['match.rerun'] = () => askConfirm({
+  title: '重新匹配？', body: '会按最新的偏好重新分团，当前的分组、确认状态、已生成的行程和账单都会被清空。', ok: '重新匹配', danger: true,
+  onOk: () => runMatchAnimated(route.code),
+});
+A['g.detail'] = x => { ui.openDetail[x.g] = !ui.openDetail[x.g]; render(); };
+A['g.confirm'] = x => {
+  const code = route.code, me = Q.me(code);
+  const was = Q.group(code, x.g).confirmedIds.includes(me.id);
+  const full = Store.toggleConfirm(code, x.g, me.id);
+  render();
+  if (full) { confetti(); toast(`${Q.group(code, x.g).name} 正式成团！`); }
+  else toast(was ? '已撤回确认' : '已确认加入 ✓');
+};
+A['move.open'] = x => { ui.modal = { type: 'move', mid: x.m, self: !!x.self }; render(); };
+A['move.to'] = x => {
+  const m = S.members[x.m];
+  const code = m.tripCode;
+  Store.moveMember(code, x.m, x.g || null);
+  ui.modal = null;
+  render();
+  toast(x.g ? `${m.nickname} 已换到 ${Q.group(code, x.g).name}，匹配度已重算` : `${m.nickname} 已移到待调剂区`);
+};
+
+/* ---- pages/group.js ---- */
+/* ============ pages/group.js · 小团空间：行程规划 + AA 费用 ============ */
+const CAT_EMOJI = { 住宿: '🏨', 餐饮: '🍜', 门票: '🎫', 交通: '🚕', 其他: '🎤' };
+
+function pageGroup(code, gid, tab) {
+  const trip = Q.trip(code);
+  if (!trip) return emptyView('🧭', '这个团不存在', '', navBtn('/', '回首页', 'btn primary'));
+  const match = Q.match(code);
+  const g = Q.group(code, gid);
+  if (!match || !g) return emptyView('🧩', '找不到这个小团', '可能已经重新匹配过了，回到组队结果看看最新分组。', navBtn(`/t/${code}/match`, '查看组队结果', 'btn primary'));
+  const byId = Q.byId(code), me = Q.me(code);
+  const inGroup = me && g.memberIds.includes(me.id);
+  return `
+  <div class="row between">${navBtn(`/t/${code}/match`, '← 组队结果', 'btn ghost')}
+    <label class="who"><span>切换小团</span><select id="g-switch" data-ch="g.switch">${match.groups.map(x => `<option value="${x.id}" ${x.id === gid ? 'selected' : ''}>${destEmoji(x.destination)} ${esc(x.name)}</option>`).join('')}</select></label></div>
+  <section class="card group-head">
+    <div class="row" style="align-items:flex-start;gap:16px">
+      <span style="font-size:46px;line-height:1">${destEmoji(g.destination)}</span>
+      <div class="stack" style="gap:6px;flex:1;min-width:220px">
+        <h2>${esc(g.name)}</h2>
+        <div class="row small muted">
+          <span class="tag sun">${g.dateWindow ? `${fmtMD(g.dateWindow[0])}–${fmtMD(g.dateWindow[1])}` : '日期待协商'} · ${g.days || '—'} 天</span>
+          <span class="tag sea">${g.memberIds.length} 人</span>
+          <span class="tag mint">人均 ${g.budgetOk ? `¥${g.budgetRange[0]}–${g.budgetRange[1]}` : '待商量'}</span>
+          <span class="tag">匹配度 ${g.score}%</span>
+        </div>
+      </div>
+      <div class="ava-stack">${g.memberIds.map(i => ava(byId[i], '', g.confirmedIds.includes(i))).join('')}</div>
+    </div>
+    ${!inGroup && me ? `<p class="small muted">你（${esc(me.nickname)}）不在这个团，正在以旁观身份查看。可以在右上角切换身份。</p>` : ''}
+  </section>
+  <div class="tabs" role="tablist">
+    <button class="${tab === 'plan' ? 'on' : ''}" data-act="nav" data-to="/t/${code}/g/${gid}">🗺️ 统一行程</button>
+    <button class="${tab === 'split' ? 'on' : ''}" data-act="nav" data-to="/t/${code}/g/${gid}/split">💰 AA 费用${Q.expenses(gid).length ? ` · ${Q.expenses(gid).length}` : ''}</button>
+  </div>
+  ${tab === 'plan' ? planTab(code, g, byId, me) : splitTab(code, g, byId, me)}`;
+}
+
+/* ================= 行程 ================= */
+function planTab(code, g, byId, me) {
+  if (ui.planAnim) return `<section class="card loading"><div class="plane-anim">🧳</div><h3>正在打包行李，为 ${g.memberIds.length} 人安排 ${g.days} 天行程…</h3><p class="muted small">读取团画像 → 匹配目的地资源库 → 估算预算</p></section>`;
+  const it = S.itineraries[g.id];
+  const ms = g.memberIds.map(i => byId[i]).filter(m => m && m.preference);
+  if (!it) {
+    const prof = groupProfile(ms);
+    const tags = Object.entries(prof.tagWeight).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return `<section class="card empty">
+      <div class="art">🧳</div><h3>行李箱已就绪</h3>
+      <p class="muted">会根据团画像，从${esc(g.destination)}的资源库里挑选景点、美食和住宿：</p>
+      <div class="chips" style="justify-content:center">${tags.map(([t, n]) => `<span class="tag sun">${t} ×${n}</span>`).join('')}
+        <span class="tag lemon">${PACE_EMOJI[prof.pace]} ${PACE_LABEL[prof.pace]}节奏</span><span class="tag sea">${g.days} 天</span>
+        <span class="tag mint">¥${g.budgetRange[0]}–${g.budgetRange[1]}</span>${prof.exclusions.length ? `<span class="tag danger">避开：${prof.exclusions.join('、')}</span>` : ''}</div>
+      <button class="btn primary lg" data-act="plan.gen" ${g.days ? '' : 'disabled'}>✨ 生成我们的行程</button>
+      ${g.days ? '' : '<span class="hint warn">团内没有共同空档，先调整成员或日期。</span>'}
+    </section>`;
+  }
+  const lib = getPoiLib(g.destination);
+  const di = Math.min(ui.day[g.id] || 0, it.days.length - 1);
+  const day = it.days[di];
+  const stale = it.memberSig !== g.memberIds.slice().sort().join(',');
+  return `
+  ${stale ? `<div class="banner"><span>🔄</span><div class="grow small">团里成员有变动，可以重新生成行程来照顾新同学的偏好。</div><button class="btn sm primary" data-act="plan.regen">重新生成</button></div>` : ''}
+  <div class="plan-layout">
+    <div class="stack" style="gap:16px">
+      <div class="days">${it.days.map((d, i) => `<button class="day-btn ${i === di ? 'on' : ''}" data-act="plan.day" data-i="${i}"><b>DAY ${i + 1}</b><small>${fmtMD(d.date)} 周${weekdayCN(d.date)}</small></button>`).join('')}</div>
+      <div class="timeline">${day.items.map(item => `
+        <div class="tl-row"><div class="tl-slot"><div class="ic">${SLOT_ICON[item.slot]}</div>${SLOT_LABEL[item.slot]}</div>${itemCard(it, di, item, lib, me)}</div>`).join('')}</div>
+      <div class="row">
+        <button class="btn" data-act="plan.copy">📋 复制文字版行程</button>
+        <button class="btn" data-act="plan.regen">🔄 重新生成</button>
+        <button class="btn primary" data-act="nav" data-to="/t/${code}/g/${g.id}/split">去记账 →</button>
+      </div>
+    </div>
+    ${budgetPanel(it, g, lib)}
+  </div>`;
+}
+
+function itemCard(it, di, item, lib, me) {
+  if (item.fixed) return `<div class="ticket fixed"><div class="ticket-head"><span class="em">${item.fixed.emoji}</span><div class="t"><b>${esc(item.fixed.title)}</b><div class="why">${esc(item.fixed.note)}</div></div></div></div>`;
+  if (!item.poiId) return `<div class="ticket free"><div class="ticket-head"><span class="em">🆓</span><div class="t"><b>自由活动</b><div class="why">这个时段空出来了，可以自己逛，也可以加一个安排</div></div></div>
+    <div class="ticket-actions"><button class="btn sm primary" data-act="plan.addOpen" data-d="${di}" data-i="${item.id}">+ 添加</button></div></div>`;
+  const p = lib.byId[item.poiId];
+  const votes = Object.values(item.votes);
+  const up = votes.filter(v => v === 1).length, down = votes.filter(v => v === -1).length;
+  const mine = me ? item.votes[me.id] : undefined;
+  return `<div class="ticket">
+    <div class="ticket-head"><span class="em">${p.emoji}</span>
+      <div class="t"><b>${esc(p.name)}</b><div class="chips" style="gap:4px;margin-top:4px">${p.type === 'f' && p.tags.includes('美食') ? '' : `<span class="tag sea">${TYPE_LABEL[p.type]}</span>`}${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div></div>
+      <span class="cost">${p.cost ? `¥${p.cost}<span class="small muted">/人</span>` : '<span class="tag mint">免费</span>'}</span></div>
+    <div class="why">💡 ${esc(item.reason)}</div>
+    <div class="ticket-actions">
+      <button class="icon-btn ${mine === 1 ? 'on' : ''}" data-act="plan.vote" data-d="${di}" data-i="${item.id}" data-v="1" aria-label="赞">👍 ${up}</button>
+      <button class="icon-btn ${mine === -1 ? 'on' : ''}" data-act="plan.vote" data-d="${di}" data-i="${item.id}" data-v="-1" aria-label="踩">👎 ${down}</button>
+      <span class="spacer"></span>
+      <button class="icon-btn" data-act="plan.replace" data-d="${di}" data-i="${item.id}">🔄 换一个</button>
+      <button class="icon-btn" data-act="plan.remove" data-d="${di}" data-i="${item.id}">🗑 删除</button>
+    </div></div>`;
+}
+
+function budgetPanel(it, g, lib) {
+  const e = it.estimate, max = g.budgetRange[1];
+  const over = g.budgetOk && e.total > max;
+  const stay = lib.byId[it.stayPoiId];
+  const nights = Math.max(1, it.days.length - 1);
+  return `
+  <aside class="budget-panel">
+    <section class="card stack">
+      <div class="row between"><h3>🛏️ 住宿</h3><button class="btn sm" data-act="plan.stay">换一家</button></div>
+      <div><b>${esc(stay.name)}</b><div class="small muted">${STAY_LABEL[stay.tier]} · ¥${stay.cost}/人/晚 × ${nights} 晚</div></div>
+    </section>
+    <section class="card stack">
+      <div class="row between"><h3>💰 人均预算估算</h3>${g.budgetOk ? `<span class="tag ${over ? 'danger' : 'mint'}">${over ? `超出 ¥${e.total - max}/人` : '✓ 在预算内'}</span>` : ''}</div>
+      <div class="kv"><span>住宿</span><span>¥${e.stay}</span></div>
+      <div class="kv"><span>餐饮</span><span>¥${e.food}</span></div>
+      <div class="kv"><span>门票 & 体验</span><span>¥${e.tickets}</span></div>
+      <div class="kv"><span>市内交通</span><span>¥${e.transport}</span></div>
+      <div class="kv total"><span>合计 / 人</span><span>¥${e.total}</span></div>
+      ${g.budgetOk ? `<div class="meter ${over ? 'over' : ''}"><i style="width:${Math.min(100, e.total / max * 100)}%"></i></div>
+      <div class="small muted">团预算上限 ¥${max}，不含往返大交通</div>` : ''}
+      ${over ? `<button class="btn primary" data-act="plan.cheaper">一键换成更省钱的住宿</button>` : ''}
+    </section>
+  </aside>`;
+}
+
+function modalAddPoi(m) {
+  const it = S.itineraries[m.gid];
+  const item = it.days[m.di].items.find(x => x.id === m.itemId);
+  let list = addCandidates(it, m.di, m.itemId);
+  if (m.filter) list = list.filter(x => x.poi.tags.includes(m.filter) || TYPE_LABEL[x.poi.type] === m.filter);
+  const filters = ['美食', ...STYLE_TAGS.filter(t => t !== '美食'), '景点', '体验'];
+  return `
+  <div class="modal-head"><div><h3>为 Day ${m.di + 1} ${SLOT_LABEL[item.slot]}添加安排</h3><p class="small muted">按团画像排序，标红的是有人不想要的类型</p></div><button class="icon-btn" data-act="modal.close">✕</button></div>
+  <div class="chips"><button class="chip ${!m.filter ? 'on' : ''}" data-act="add.filter" data-f="">全部</button>${filters.map(f => `<button class="chip ${m.filter === f ? 'on' : ''}" data-act="add.filter" data-f="${f}">${f}</button>`).join('')}</div>
+  <div class="stack">${list.map(({ poi, conflict }) => `
+    <button class="option" data-act="add.pick" data-p="${poi.id}"><span style="font-size:24px">${poi.emoji}</span>
+      <div class="grow"><b>${esc(poi.name)}</b><div class="small muted">${TYPE_LABEL[poi.type]} · ${poi.tags.join(' / ')}</div>${conflict ? `<span class="tag danger">有人不想要：${poi.conflicts.join('、')}</span>` : ''}</div>
+      <span class="num">${poi.cost ? `¥${poi.cost}` : '免费'}</span></button>`).join('') || '<p class="muted">这个时段没有更多可选项了，换个筛选试试。</p>'}</div>`;
+}
+
+/* ---------- 行程交互 ---------- */
+const curGroup = () => Q.group(route.code, route.gid);
+A['plan.gen'] = () => {
+  ui.planAnim = true; render();
+  setTimeout(() => {
+    ui.planAnim = false;
+    const it = Store.generatePlan(route.code, route.gid, false);
+    ui.day[route.gid] = 0;
+    render();
+    const g = curGroup();
+    toast(`已为 ${g.memberIds.length} 人生成 ${it.days.length} 天行程，人均预计 ¥${it.estimate.total}${g.budgetOk && it.estimate.total <= g.budgetRange[1] ? ' ✓' : ''}`);
+  }, 1300);
+};
+A['plan.regen'] = () => askConfirm({
+  title: '重新生成行程？', body: '会按当前成员重新安排，你手动做的替换、删除和投票都会被覆盖。', ok: '重新生成',
+  onOk: () => { Store.generatePlan(route.code, route.gid, true); ui.day[route.gid] = 0; ui.modal = null; render(); toast('已重新生成一版新行程'); },
+});
+A['plan.day'] = x => { ui.day[route.gid] = Number(x.i); render(); };
+A['plan.replace'] = x => {
+  const it = S.itineraries[route.gid];
+  const next = replaceItem(it, Number(x.d), x.i);
+  if (!next) { toast('没有更多同类推荐了'); return; }
+  Store.setPlan(route.gid, next); render();
+  const p = getPoiLib(it.destination).byId[next.days[Number(x.d)].items.find(i => i.id === x.i).poiId];
+  toast(`换成了「${p.name}」`);
+};
+A['plan.remove'] = x => { Store.setPlan(route.gid, removeItem(S.itineraries[route.gid], Number(x.d), x.i)); render(); toast('已删除，这个时段变成自由活动'); };
+A['plan.addOpen'] = x => { ui.modal = { type: 'addPoi', gid: route.gid, di: Number(x.d), itemId: x.i, filter: '' }; render(); };
+A['add.filter'] = x => { ui.modal.filter = x.f; render(); };
+A['add.pick'] = x => {
+  const m = ui.modal;
+  Store.setPlan(m.gid, addItem(S.itineraries[m.gid], m.di, m.itemId, x.p));
+  ui.modal = null; render(); toast('已添加到行程');
+};
+A['plan.vote'] = x => {
+  const me = Q.me(route.code);
+  if (!me) { toast('先在右上角选择你的身份'); return; }
+  Store.setPlan(route.gid, voteItem(S.itineraries[route.gid], Number(x.d), x.i, me.id, Number(x.v)));
+  render();
+};
+A['plan.stay'] = () => {
+  const next = nextStay(S.itineraries[route.gid]); Store.setPlan(route.gid, next); render();
+  toast(`换成了「${getPoiLib(next.destination).byId[next.stayPoiId].name}」`);
+};
+A['plan.cheaper'] = () => {
+  const next = cheaperStay(S.itineraries[route.gid]);
+  if (!next) { toast('已经是最便宜的住宿了，试试删掉一个收费项目'); return; }
+  Store.setPlan(route.gid, next); render();
+  const g = curGroup();
+  toast(next.estimate.total <= g.budgetRange[1] ? `换好了，人均 ¥${next.estimate.total}，回到预算内 ✓` : `换好了，人均 ¥${next.estimate.total}，还差一点`);
+};
+A['plan.copy'] = () => copyText(itineraryText(S.itineraries[route.gid], curGroup(), Q.byId(route.code)), '行程已复制，发到群里吧');
+CH['g.switch'] = el => go(`/t/${route.code}/g/${el.value}${route.tab === 'split' ? '/split' : ''}`);
+
+/* ================= AA 费用 ================= */
+function splitTab(code, g, byId, me) {
+  const ex = Q.expenses(g.id);
+  const total = ex.reduce((s, e) => s + e.amount, 0);
+  const n = g.memberIds.length;
+  const it = S.itineraries[g.id];
+  const estAll = it ? it.estimate.total * n * 100 : 0;
+  const tab = ui.splitTab;
+  const fab = `<div class="fab"><button class="btn primary lg" data-act="exp.new">+ 记一笔</button></div>`;
+  const summary = `
+  <div class="stat-row">
+    <div class="stat"><small>总支出</small><b>${fmtFen(total)}</b><small>${ex.length} 笔账单</small></div>
+    <div class="stat"><small>人均</small><b>${fmtFen(Math.round(total / Math.max(1, n)))}</b><small>${n} 人</small></div>
+    <div class="stat"><small>与行程预估对比</small><b style="font-size:16px">${!it ? '还没生成行程' : !total ? `预估 ${fmtFen(estAll)}` : total <= estAll ? `比预估少 ${fmtFen(estAll - total)} 👍` : `超出预估 ${fmtFen(total - estAll)}`}</b><small>${it ? `全团预估 ${fmtFen(estAll)}` : '生成行程后可对比'}</small></div>
+  </div>`;
+  const tabs = `<div class="row"><div class="seg"><button class="${tab === 'bills' ? 'on' : ''}" data-act="split.tab" data-t="bills">账单</button><button class="${tab === 'settle' ? 'on' : ''}" data-act="split.tab" data-t="settle">结算</button></div><span class="spacer"></span>
+    ${ex.length ? '' : '<button class="btn sm" data-act="exp.demo">导入示例账单</button>'}</div>`;
+  if (tab === 'bills') {
+    if (!ex.length) return summary + tabs + emptyView('🏨', '还没有账单', '第一笔通常是住宿。记账时可以只勾选实际参与的人，比如没去 KTV 的同学不用分摊。',
+      `<button class="btn primary" data-act="exp.new">+ 记一笔</button><button class="btn" data-act="exp.demo">导入示例账单</button>`) + fab;
+    const byDate = {};
+    ex.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
+    return summary + tabs + Object.entries(byDate).map(([d, list]) => `
+      <section class="stack" style="gap:8px"><div class="small muted">${fmtMD(d)} 周${weekdayCN(d)} · ${fmtFen(list.reduce((s, e) => s + e.amount, 0))}</div>
+      ${list.map(e => {
+        const payer = byId[e.payerId];
+        const all = e.participantIds.length === n && g.memberIds.every(i => e.participantIds.includes(i));
+        return `<button class="bill" data-act="exp.edit" data-id="${e.id}"><span class="cat">${CAT_EMOJI[e.category] || '🧾'}</span>
+          <div class="info"><b>${esc(e.title)}</b><span class="small muted">${payer ? `${esc(payer.avatar)} ${esc(payer.nickname)} 付款` : ''} · ${all ? '全员' : `${e.participantIds.length} 人`}参与 · 人均 ${fmtFen(Math.round(e.amount / e.participantIds.length))}</span></div>
+          <span class="amt">${fmtFen(e.amount)}</span></button>`;
+      }).join('')}</section>`).join('') + fab;
+  }
+  // 结算
+  const bal = computeBalances(ex, g.memberIds);
+  const tr = settle(bal);
+  const paid = S.paid[g.id] || [];
+  const doneN = tr.filter(t => paid.includes(transferKey(t))).length;
+  const allDone = tr.length && doneN === tr.length;
+  const name = id => byId[id] ? `${byId[id].avatar} ${esc(byId[id].nickname)}` : '已退出成员';
+  if (!ex.length) return summary + tabs + emptyView('🧮', '还没有可结算的账单', '记账后会自动生成最省事的转账方案。', `<button class="btn primary" data-act="exp.new">+ 记一笔</button><button class="btn" data-act="exp.demo">导入示例账单</button>`) + fab;
+  return summary + tabs + `
+  ${allDone ? `<div class="banner mint"><span style="font-size:26px">🎉</span><div class="grow"><b>账清了，友谊还在</b><div class="small">${tr.length} 笔转账全部完成。</div></div></div>` : ''}
+  <div class="grid-2">
+    <section class="card stack">
+      <div class="card-title"><h3>转账方案</h3><span class="tag ${allDone ? 'mint' : 'sun'}">已结清 ${doneN}/${tr.length}</span></div>
+      ${tr.length ? tr.map(t => { const k = transferKey(t), done = paid.includes(k);
+        return `<div class="transfer ${done ? 'done' : ''}"><span>${name(t.from)}</span><span class="arrow">→</span><span>${name(t.to)}</span><span class="amt">${fmtFen(t.amount)}</span>
+          <button class="btn sm ${done ? '' : 'primary'}" data-act="split.paid" data-k="${esc(k)}">${done ? '撤销' : '标记已转'}</button></div>`; }).join('')
+        : '<div class="empty"><div class="art">✨</div><b>大家互不相欠</b><p class="small muted">每个人付的正好等于该承担的。</p></div>'}
+      <p class="small muted">按「最大欠款人转给最大应收人」计算，转账笔数不超过 ${Math.max(0, n - 1)} 笔。</p>
+      ${tr.length ? '<button class="btn" data-act="split.copy">📋 复制结算清单</button>' : ''}
+    </section>
+    <section class="card">
+      <div class="card-title"><h3>每人收支</h3></div>
+      <div class="table-wrap"><table class="bal-table"><thead><tr><th>成员</th><th>已垫付</th><th>应承担</th><th>差额</th></tr></thead><tbody>
+      ${Object.entries(bal).map(([id, b]) => `<tr><td>${name(id)}</td><td>${fmtFen(b.paid)}</td><td>${fmtFen(b.owed)}</td><td class="${b.net > 0 ? 'pos' : b.net < 0 ? 'neg' : ''}">${b.net > 0 ? '+' : ''}${fmtFen(b.net)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="small muted" style="margin-top:8px">差额为正表示应收，为负表示应付。</p>
+    </section>
+  </div>` + fab;
+}
+
+function groupDatesList(g) {
+  return g.dateWindow ? dateList(g.dateWindow[0], g.dateWindow[1]) : [];
+}
+function modalExpense() {
+  const x = ui.exp, g = curGroup(), byId = Q.byId(route.code);
+  const dates = groupDatesList(g);
+  return `
+  <div class="modal-head"><h3>${x.id ? '编辑账单' : '记一笔'}</h3><button class="icon-btn" data-act="modal.close">✕</button></div>
+  <div class="field"><label for="exp-amount">金额（元）</label>
+    <input id="exp-amount" class="input ${x.err.amount ? 'err' : ''}" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${esc(x.amount)}" data-in="exp" data-k="amount" style="font-size:28px;font-weight:700">
+    ${x.err.amount ? `<span class="err-text">${x.err.amount}</span>` : ''}</div>
+  <div class="field"><label for="exp-title">名称</label><input id="exp-title" class="input" maxlength="20" placeholder="如：火锅、门票、打车" value="${esc(x.title)}" data-in="exp" data-k="title"></div>
+  <div class="field"><span class="label">类别</span><div class="chips">${Object.keys(CAT_EMOJI).map(c => `<button class="chip ${x.category === c ? 'on' : ''}" data-act="exp.cat" data-c="${c}">${CAT_EMOJI[c]} ${c}</button>`).join('')}</div></div>
+  <div class="field"><span class="label">谁付的钱</span><div class="chips">${g.memberIds.map(i => `<button class="chip ${x.payerId === i ? 'on' : ''}" data-act="exp.payer" data-id="${i}">${esc(byId[i].avatar)} ${esc(byId[i].nickname)}</button>`).join('')}</div></div>
+  <div class="field"><div class="row between"><span class="label">谁参与分摊 <span class="muted small">（${x.participantIds.length} 人${x.participantIds.length && Number(x.amount) > 0 ? `，人均 ${fmtFen(Math.round(yuanToFen(x.amount) / x.participantIds.length))}` : ''}）</span></span>
+    <button class="btn sm ghost" data-act="exp.all">${x.participantIds.length === g.memberIds.length ? '全不选' : '全选'}</button></div>
+    <div class="chips">${g.memberIds.map(i => `<button class="chip ${x.participantIds.includes(i) ? 'on' : ''}" data-act="exp.part" data-id="${i}">${esc(byId[i].avatar)} ${esc(byId[i].nickname)}</button>`).join('')}</div>
+    ${x.err.part ? `<span class="err-text">${x.err.part}</span>` : ''}</div>
+  <div class="field"><label for="exp-date">日期</label>
+    ${dates.length ? `<select id="exp-date" class="input" data-ch="exp" data-k="date">${dates.map((d, i) => `<option value="${d}" ${x.date === d ? 'selected' : ''}>Day ${i + 1} · ${fmtMD(d)} 周${weekdayCN(d)}</option>`).join('')}</select>`
+      : `<input id="exp-date" type="date" class="input" value="${x.date}" data-in="exp" data-k="date">`}</div>
+  <div class="modal-foot">
+    ${x.id ? (x.confirmDel ? `<button class="btn danger solid" data-act="exp.delete">确认删除</button>` : `<button class="btn danger" data-act="exp.askDel">删除</button>`) : ''}
+    <span class="spacer"></span>
+    <button class="btn" data-act="modal.close">取消</button>
+    <button class="btn primary" data-act="exp.save">保存</button>
+  </div>`;
+}
+
+/* ---------- AA 交互 ---------- */
+A['split.tab'] = x => { ui.splitTab = x.t; render(); };
+A['exp.new'] = () => {
+  const g = curGroup(), me = Q.me(route.code);
+  ui.exp = { id: null, amount: '', title: '', category: '餐饮', payerId: me && g.memberIds.includes(me.id) ? me.id : g.memberIds[0],
+    participantIds: g.memberIds.slice(), date: (groupDatesList(g)[0]) || new Date().toISOString().slice(0, 10), err: {} };
+  ui.modal = { type: 'expense' }; render();
+  setTimeout(() => { const el = document.getElementById('exp-amount'); el && el.focus(); }, 30);
+};
+A['exp.edit'] = x => {
+  const e = S.expenses[x.id];
+  ui.exp = { ...e, amount: String(e.amount / 100), participantIds: e.participantIds.slice(), err: {} };
+  ui.modal = { type: 'expense' }; render();
+};
+IN.exp = el => { ui.exp[el.dataset.k] = el.value; };
+CH.exp = el => { ui.exp[el.dataset.k] = el.value; };
+A['exp.cat'] = x => { ui.exp.category = x.c; render(); };
+A['exp.payer'] = x => { ui.exp.payerId = x.id; render(); };
+A['exp.part'] = x => { const p = ui.exp.participantIds; const i = p.indexOf(x.id); i >= 0 ? p.splice(i, 1) : p.push(x.id); ui.exp.err.part = ''; render(); };
+A['exp.all'] = () => { const g = curGroup(); ui.exp.participantIds = ui.exp.participantIds.length === g.memberIds.length ? [] : g.memberIds.slice(); render(); };
+A['exp.save'] = () => {
+  const x = ui.exp; const err = {};
+  const fen = yuanToFen(x.amount);
+  if (!(fen > 0)) err.amount = '金额要大于 0';
+  if (!x.participantIds.length) err.part = '至少选 1 个参与人';
+  x.err = err;
+  if (Object.keys(err).length) { render(); return; }
+  const g = curGroup();
+  const reset = Store.upsertExpense(g.id, {
+    id: x.id || undefined, createdAt: x.createdAt, title: x.title.trim() || x.category, amount: fen, category: x.category,
+    payerId: x.payerId, participantIds: x.participantIds.slice(), date: x.date,
+  });
+  ui.modal = null; render();
+  toast(reset ? '账单有变动，结算方案已更新' : (x.id ? '已保存修改' : `记好了：${fmtFen(fen)}`));
+};
+A['exp.askDel'] = () => { ui.exp.confirmDel = true; render(); };
+A['exp.delete'] = () => { const reset = Store.deleteExpense(route.gid, ui.exp.id); ui.modal = null; render(); toast(reset ? '已删除，结算方案已更新' : '已删除这笔账单'); };
+A['exp.demo'] = () => { Store.importDemoExpenses(route.code, route.gid); render(); toast('已导入 5 笔示例账单（KTV 不是全员参与）'); };
+A['split.paid'] = x => {
+  Store.togglePaid(route.gid, x.k);
+  const tr = settle(computeBalances(Q.expenses(route.gid), curGroup().memberIds));
+  const paid = S.paid[route.gid] || [];
+  const all = tr.length && tr.every(t => paid.includes(transferKey(t)));
+  render();
+  if (all) { confetti(); toast('🎉 账清了，友谊还在'); }
+};
+A['split.copy'] = () => {
+  const g = curGroup(), byId = Q.byId(route.code);
+  const tr = settle(computeBalances(Q.expenses(g.id), g.memberIds));
+  const paid = S.paid[g.id] || [];
+  const nm = id => byId[id] ? byId[id].nickname : '?';
+  copyText(`【${g.name} · AA 结算】\n` + tr.map(t => `${nm(t.from)} → ${nm(t.to)}  ${fmtFen(t.amount)}${paid.includes(transferKey(t)) ? '（已转）' : ''}`).join('\n') + '\n—— GradTrip 自动计算', '结算清单已复制');
+};
+
+/* ---- app.js ---- */
+/* ============ app.js · 路由、布局、弹层、事件委托、启动 ============ */
+let route = { name: 'landing' };
+
+function parseRoute(h) {
+  const p = (h || '').replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (!p.length) return { name: 'landing' };
+  if (p[0] === 'create') return { name: 'create' };
+  if (p[0] === 't' && p[1]) {
+    const code = p[1].toUpperCase();
+    if (!p[2]) return { name: 'dash', code };
+    if (p[2] === 'join') return { name: 'join', code };
+    if (p[2] === 'match') return { name: 'match', code };
+    if (p[2] === 'g' && p[3]) return { name: 'group', code, gid: p[3], tab: p[4] === 'split' ? 'split' : 'plan' };
+  }
+  return { name: 'landing' };
+}
+function routeToPath(r) {
+  return r.name === 'landing' ? '/' : r.name === 'create' ? '/create' : r.name === 'dash' ? `/t/${r.code}`
+    : r.name === 'group' ? `/t/${r.code}/g/${r.gid}${r.tab === 'split' ? '/split' : ''}` : `/t/${r.code}/${r.name}`;
+}
+
+/** 路由跳转：优先写入 hash（支持浏览器后退），在受限环境中退回内存路由 */
+function go(path) {
+  ui.modal = null;
+  const prev = route;
+  route = parseRoute('#' + path);
+  onEnter(prev);
+  try { if (location.hash !== '#' + path) history.pushState(null, '', '#' + path); } catch (e) { /* sandbox */ }
+  try { sessionStorage.setItem('gradtrip.route', path); } catch (e) { /* ignore */ }
+  render();
+  window.scrollTo(0, 0);
+}
+function onEnter(prev) {
+  if (route.code && S.trips[route.code]) S.lastTrip = route.code, persist();
+  if (route.name === 'join' && (!prev || prev.name !== 'join')) ui.join = null;
+  if (route.name === 'create' && (!prev || prev.name !== 'create')) ui.create = null;
+  if (route.name === 'group' && (!prev || prev.gid !== route.gid)) ui.splitTab = 'bills';
+  if (route.name !== 'match') ui.matchAnim = null;
+}
+
+function pageFor(r) {
+  switch (r.name) {
+    case 'create': return pageCreate();
+    case 'dash': return pageDash(r.code);
+    case 'join': return pageJoin(r.code);
+    case 'match': return pageMatch(r.code);
+    case 'group': return pageGroup(r.code, r.gid, r.tab);
+    default: return pageLanding();
+  }
+}
+
+function topbar() {
+  const trip = route.code && S.trips[route.code];
+  let who = '';
+  if (trip) {
+    const ms = Q.members(trip.code), me = Q.me(trip.code);
+    who = `<label class="who"><span>我是</span><select id="who" data-ch="who" aria-label="切换身份">
+      ${me ? '' : '<option value="">选择身份</option>'}
+      ${ms.map(m => `<option value="${m.id}" ${me && me.id === m.id ? 'selected' : ''}>${esc(m.avatar)} ${esc(m.nickname)}${trip.creatorId === m.id ? '（发起人）' : ''}</option>`).join('')}</select></label>`;
+  }
+  return `<header class="topbar"><div class="wrap topbar-in">
+    <button class="logo" data-act="nav" data-to="/">Grad<b>Trip</b><small>毕旅搭子</small></button>
+    ${trip ? `<button class="crumb" data-act="nav" data-to="/t/${trip.code}" title="回到看板">${esc(trip.name)}</button>` : ''}
+    <span class="spacer"></span>${who}</div></header>`;
+}
+
+function dock() {
+  const inTrip = route.code && S.trips[route.code];
+  return `<div class="dock">
+    ${ui.dock ? `<div class="dock-panel">
+      <span class="small muted" style="padding:2px 6px">Demo 工具</span>
+      <button class="btn sm ghost" data-act="demo.load">⚡ 载入示例活动</button>
+      ${inTrip ? '<button class="btn sm ghost" data-act="dash.mock">+ 模拟一位同学加入</button>' : ''}
+      <button class="btn sm ghost" data-act="demo.reset" style="color:var(--danger)">↺ 重置 Demo</button>
+    </div>` : ''}
+    <button class="dock-toggle" data-act="dock.toggle">${ui.dock ? '✕ 收起' : '🛠 Demo'}</button></div>`;
+}
+
+function overlay() {
+  const m = ui.modal;
+  if (!m) return '';
+  if (m.type === 'drawer') return `<div class="overlay drawer-overlay" data-act="modal.backdrop"><div class="drawer" role="dialog" aria-modal="true">${drawerMember(m.id)}</div></div>`;
+  let body = '', cls = '', sheet = 'sheet';
+  if (m.type === 'confirm') {
+    body = `<h3>${esc(m.title)}</h3><p class="muted">${esc(m.body)}</p>
+      <div class="modal-foot"><button class="btn" data-act="modal.close">取消</button><button class="btn ${m.danger ? 'danger solid' : 'primary'}" data-act="confirm.ok">${esc(m.ok)}</button></div>`;
+    sheet = '';
+  } else if (m.type === 'created') {
+    const trip = S.trips[m.code];
+    body = `<div class="modal-head"><div><div class="eyebrow">登机口已开放 🛫</div><h3>${esc(trip.name)}</h3></div><button class="icon-btn" data-act="nav" data-to="/t/${m.code}">✕</button></div>
+      <div class="code-big">${m.code}</div>
+      <p class="small muted" style="text-align:center">把邀请码发到班群，同学们在首页点「我有邀请码」就能加入</p>
+      <div class="two"><button class="btn" data-act="created.copyCode" data-c="${m.code}">复制邀请码</button><button class="btn" data-act="created.copyText" data-c="${m.code}">复制邀请文案</button></div>
+      <div class="two"><button class="btn primary" data-act="created.fill" data-c="${m.code}">先填我的偏好</button><button class="btn" data-act="nav" data-to="/t/${m.code}">去看板</button></div>`;
+    sheet = '';
+  } else if (m.type === 'dupName') {
+    const dm = S.members[m.member];
+    body = `<div class="row">${ava(dm, 'lg')}<div><h3>「${esc(dm.nickname)}」已经有人用了</h3><p class="small muted">是你本人吗？</p></div></div>
+      <div class="modal-foot"><button class="btn" data-act="dup.rename">换个名字</button><button class="btn primary" data-act="dup.me">是我，继续编辑</button></div>`;
+    sheet = '';
+  } else if (m.type === 'move') { body = modalMove(m.mid, m.self); }
+  else if (m.type === 'addPoi') { body = modalAddPoi(m); cls = 'wide'; }
+  else if (m.type === 'expense') { body = modalExpense(); }
+  else if (m.type === 'copy') {
+    body = `<div class="modal-head"><h3>手动复制</h3><button class="icon-btn" data-act="modal.close">✕</button></div>
+      <p class="small muted">当前环境不允许自动写入剪贴板，请长按或 Ctrl+C 复制下面的内容：</p>
+      <textarea id="copy-area" class="input" rows="7" readonly>${esc(m.text)}</textarea>
+      <div class="modal-foot"><button class="btn primary" data-act="modal.close">好的</button></div>`;
+    sheet = '';
+  }
+  return `<div class="overlay ${sheet}" data-act="modal.backdrop"><div class="modal ${cls}" role="dialog" aria-modal="true">${body}</div></div>`;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  let page;
+  try { page = pageFor(route); }
+  catch (e) { console.error(e); page = emptyView('🛠️', '页面出了点问题', esc(e.message), navBtn('/', '回首页', 'btn primary') + '<button class="btn" data-act="demo.reset">重置 Demo</button>'); }
+  app.innerHTML = `${topbar()}<main class="wrap page" id="main">${page}</main>${dock()}${overlay()}`;
+  if (ui.modal && ui.modal.type === 'copy') { const t = document.getElementById('copy-area'); if (t) { t.focus(); t.select(); } }
+}
+
+/* ---------- 全局动作 ---------- */
+A.nav = x => go(x.to);
+A['modal.close'] = () => closeModal();
+A['modal.backdrop'] = (x, el, e) => { if (e.target === el) closeModal(); };
+A['confirm.ok'] = () => { const fn = ui.modal.onOk; ui.modal = null; fn && fn(); if (!ui.modal) render(); };
+A['dock.toggle'] = () => { ui.dock = !ui.dock; render(); };
+A['demo.reset'] = () => askConfirm({
+  title: '重置 Demo？', body: '会清空这个浏览器里所有活动、偏好、行程和账单，回到首页。', ok: '清空并重置', danger: true,
+  onOk: () => { Store.resetAll(); Object.assign(ui, { dock: false, join: null, create: null, codeOpen: false, codeVal: '', openDetail: {}, day: {} }); go('/'); toast('已重置，可以重新开始演示'); },
+});
+A['created.copyCode'] = x => copyText(x.c, `邀请码 ${x.c} 已复制`);
+A['created.copyText'] = x => copyText(inviteText(S.trips[x.c]), '邀请文案已复制');
+A['created.fill'] = x => { ui.joinIntent = null; ui.join = null; go(`/t/${x.c}/join`); };
+CH.who = el => {
+  if (!el.value) return;
+  Store.setCurrent(route.code, el.value);
+  const m = S.members[el.value];
+  if (route.name === 'join') ui.join = null;
+  render();
+  toast(`已切换为 ${m.nickname}`);
+};
+
+/* ---------- 事件委托 ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const fn = A[el.dataset.act];
+  if (!fn) { console.warn('未注册的动作', el.dataset.act); return; }
+  e.preventDefault();
+  fn({ ...el.dataset }, el, e);
+});
+document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el, e); });
+document.addEventListener('change', e => { const el = e.target.closest('[data-ch]'); if (el && CH[el.dataset.ch]) CH[el.dataset.ch](el, e); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && ui.modal) { closeModal(); return; }
+  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.enter) {
+    e.preventDefault();
+    const fn = A[e.target.dataset.enter]; fn && fn({ ...e.target.dataset }, e.target, e);
+  }
+});
+window.addEventListener('popstate', () => { const prev = route; route = parseRoute(location.hash); ui.modal = null; onEnter(prev); render(); });
+window.addEventListener('hashchange', () => { const r = parseRoute(location.hash); if (routeToPath(r) !== routeToPath(route)) { const prev = route; route = r; ui.modal = null; onEnter(prev); render(); } });
+
+/* ---------- 启动 ---------- */
+(function boot() {
+  let start = location.hash && location.hash.length > 2 ? location.hash : '';
+  if (!start) { try { const s = sessionStorage.getItem('gradtrip.route'); if (s) start = '#' + s; } catch (e) { /* ignore */ } }
+  route = parseRoute(start);
+  onEnter(null);
+  render();
+})();
+
+</script>
+</body>
+</html>
